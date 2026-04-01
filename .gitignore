@@ -1,0 +1,50 @@
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+[Uu]ser[Ss]ettings/
+
+# Asset import and cache data
+[Aa]rtifacts/
+[Aa]ssets/AssetStoreTools*
+
+# IDE and editor settings
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity / Mono / Visual Studio generated files
+sysinfo.txt
+*.stackdump
+
+# Build outputs
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.ipa
+*.xcarchive
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
