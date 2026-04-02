@@ -1,0 +1,6 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\EditorDebug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\EditorDebug\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\obj_editor\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_editor\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_editor\Debug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\obj_editor\Debug\Assembly-CSharp.pdb

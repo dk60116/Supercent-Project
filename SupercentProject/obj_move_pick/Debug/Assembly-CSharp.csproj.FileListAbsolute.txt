@@ -1,0 +1,6 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MovePick\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MovePick\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\obj_move_pick\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_move_pick\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_move_pick\Debug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\obj_move_pick\Debug\Assembly-CSharp.pdb

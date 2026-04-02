@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class BaseObject : MonoBehaviour
 {
+    [SerializeField]
+    protected string objectName;
+
     void Start()
     {
         
@@ -12,5 +15,11 @@ public class BaseObject : MonoBehaviour
     void Update()
     {
         
+    }
+
+    public string Player
+    {
+        get => objectName;
+        protected set => objectName = value;
     }
 }

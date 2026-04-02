@@ -1,0 +1,6 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\PickLock\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\PickLock\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\obj_picklock\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_picklock\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_picklock\Debug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\obj_picklock\Debug\Assembly-CSharp.pdb

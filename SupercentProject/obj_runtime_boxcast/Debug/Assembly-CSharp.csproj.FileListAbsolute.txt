@@ -1,0 +1,6 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\RuntimeBoxCast\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\RuntimeBoxCast\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\obj_runtime_boxcast\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_runtime_boxcast\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_runtime_boxcast\Debug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\obj_runtime_boxcast\Debug\Assembly-CSharp.pdb
