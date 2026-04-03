@@ -12,4 +12,9 @@ public class FactoryAnimator : MonoBehaviour
         if (factory.ProcessRunning)
             factory.SubInputResource();
     }
+
+    private void EndProcess()
+    {
+        factory.AddOutputResource();
+    }
 }

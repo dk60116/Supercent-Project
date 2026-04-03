@@ -6,6 +6,9 @@ using UnityEngine;
 public abstract class ProcessObject : BaseObject
 {
     [SerializeField]
+    protected ResourceType inputResourceType, outputResourceType;
+
+    [SerializeField]
     protected Animator animator;
 
     [SerializeField]
@@ -28,9 +31,9 @@ public abstract class ProcessObject : BaseObject
     protected void Awake()
     {
         for (int i = 0; i < inputResourcesStack.Count; ++i)
-        {
             inputResourcesStack[i].gameObject.SetActive(false);
-        }
+        for (int i = 0; i < outputResourcesStack.Count; ++i)
+            outputResourcesStack[i].gameObject.SetActive(false);
     }
 
     protected void Update()
@@ -39,10 +42,16 @@ public abstract class ProcessObject : BaseObject
         {
             if (tickTIme == 0f || tickTIme >= 0.1f)
             {
-                if (GameManager.Instance.Player.Controller.OreCount > 0)
+                if (enterInput && GameManager.Instance.Player.Controller.OreCount > 0)
                 {
-                    GameManager.Instance.Player.Controller.SubOre();
-                    AbleInputStack();
+                    GameManager.Instance.Player.Controller.SubResrouce(inputResourceType);
+                    AddInputStack();
+                }
+
+                if (enterOutput && outputCount > 0)
+                {
+                    GameManager.Instance.Player.Controller.AddResource(outputResourceType);
+                    SubOutputResource();
                 }
                 
                 tickTIme = 0f;
@@ -64,28 +73,92 @@ public abstract class ProcessObject : BaseObject
         areaRect.color = baseColor;
     }
 
-    virtual protected void AbleInputStack()
+    public void EnterOutputAreaEvent()
     {
-        GameManager.Instance.Player.Controller.GetTopOre().PlayTransferAnimation(GameManager.Instance.Player.Controller.GetTopOre().transform.position, GetTopResource().transform.position, GetTopResource().transform.eulerAngles, 0.2f, GetTopResource().gameObject);
+        enterOutput = true;
+    }
+
+    public void OutOutputAreaEvent()
+    {
+        enterOutput = false;
+    }
+
+    virtual protected void AddInputStack()
+    {
+        PortableResource sourceResource = GameManager.Instance.Player.Controller.GetPoppedResource(inputResourceType);
+        PortableResource targetResource = GetNextInputResource();
+
+        sourceResource.PlayTransferAnimation
+        (
+            sourceResource.transform.position,
+            targetResource.transform.position,
+            targetResource.transform.eulerAngles,
+            0.25f,
+            targetResource.gameObject
+        );
 
         ++inputCount;
     }
 
     public virtual void SubInputResource()
     {
-        GetTopResource().transform.DOKill();
-        GetTopResource().transform.localScale = Vector3.one;
-        GetTopResource().transform.DOScale(0f, 2f).OnComplete(() =>
+        if (inputCount <= 0)
+            return;
+
+        PortableResource targetResource = inputResourcesStack[inputCount - 1];
+        Vector3 originalScale = targetResource.transform.localScale;
+
+        targetResource.transform.DOKill();
+        targetResource.transform.DOScale(Vector3.zero, 0.3f).OnComplete(() =>
         {
-            GetTopResource().transform.localScale = Vector3.one;
-            GetTopResource().gameObject.SetActive(false);
+            targetResource.transform.localScale = originalScale;
+            targetResource.gameObject.SetActive(false);
         });
 
         --inputCount;
     }
 
-    PortableResource GetTopResource()
+    public virtual void AddOutputResource()
+    {
+        GetNextOutputResource().gameObject.SetActive(true);
+
+        ++outputCount;
+    }
+
+    public virtual void SubOutputResource()
+    {
+        PortableResource sourceResource = GetCurrentOutputResource();
+        PortableResource targetResource = GameManager.Instance.Player.Controller.GetCurrentTopResource(outputResourceType);
+
+        sourceResource.PlayTransferAnimation
+        (
+            sourceResource.transform.position,
+            targetResource.transform.position,
+            targetResource.transform.eulerAngles,
+            0.25f,
+            targetResource.gameObject
+        );
+
+        --outputCount;
+    }
+
+    public PortableResource GetNextInputResource()
     {
         return inputResourcesStack[inputCount];
+    }
+
+    public PortableResource GetNextOutputResource()
+    {
+        return outputResourcesStack[outputCount];
+    }
+
+    public PortableResource GetCurrentOutputResource()
+    {
+        if (outputCount <= 0)
+        {
+            return null;
+        }
+
+        return outputResourcesStack[outputCount - 1];
     }
 }

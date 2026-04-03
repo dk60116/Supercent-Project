@@ -27,6 +27,6 @@ public class Resource_Ore : Resource
         renderObj.SetActive(false);
 
         if (player.Controller.OreCount < player.EquipMiningTool.Status.maxOre)
-            player.Controller.AddOre();
+            player.Controller.AddResource(ResourceType.Ore);
     }
 }

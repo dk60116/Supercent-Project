@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum ResourceType { Ore, Handcuffs, Money }
+
 public abstract class Resource : BaseObject
 {
     protected Collider colliderTrigger;

@@ -10,7 +10,7 @@ public class Player : Character
 
     [SerializeField]
     private List<MiningTool> miningToolList;
-    [SerializeField]
+    [SerializeField, ReadOnly]
     private MiningTool equipMiningTool;
 
     private void Awake()
@@ -18,7 +18,7 @@ public class Player : Character
         controller = GetComponentInChildren<PlayerController>();
 
         if (miningToolList.Count > 0)
-            ChangeMiningTool(0);
+            ChangeMiningTool(MiningToolType.Screw);
     }
 
     void Start()
@@ -31,9 +31,20 @@ public class Player : Character
         
     }
 
-    public void ChangeMiningTool(int idx)
+    public void ChangeMiningTool(MiningToolType type)
     {
-        equipMiningTool = miningToolList[idx];
+        switch (type)
+        {
+            case MiningToolType.Pickaxe:
+                equipMiningTool = miningToolList[0];
+                break;
+            case MiningToolType.Screw:
+                equipMiningTool = miningToolList[1];
+                break;
+            case MiningToolType.Excavator:
+                equipMiningTool = miningToolList[2];
+                break;
+        }
     }
 
     public PlayerController Controller => controller;

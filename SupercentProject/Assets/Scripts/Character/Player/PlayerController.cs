@@ -15,10 +15,10 @@ public class PlayerController : MonoBehaviour
 
     [Header("Protable Resource Stack")]
     [SerializeField]
-    List<PortableResource> oreStack, moneyStack;
+    List<PortableResource> oreStack, handcuffsStack, moneyStack;
 
-    int maxOre, maxMoney;
-    int oreCount, moneyCount;
+    int maxOre, maxHandcuff, maxMoney;
+    int oreCount, handcuffsCount, moneyCount;
 
     [SerializeField]
     private Image maxIcon;
@@ -92,6 +92,8 @@ public class PlayerController : MonoBehaviour
 
         for (int i = 0; i < oreStack.Count; ++i)
             oreStack[i].gameObject.SetActive(false);
+        for (int i = 0; i < handcuffsStack.Count; ++i)
+            handcuffsStack[i].gameObject.SetActive(false);
         for (int i = 0; i < moneyStack.Count; ++i)
             moneyStack[i].gameObject.SetActive(false);
 
@@ -344,27 +346,88 @@ public class PlayerController : MonoBehaviour
         ableMaxIconCoroutine = null;
     }
 
-    void UpdateOreStack(int stack)
+    void UpdateResourceStack(ResourceType type, int stack)
     {
-        for (int i = 0; i < oreStack.Count; ++i)
-            oreStack[i].gameObject.SetActive(i < stack);
+        switch (type)
+        {
+            case ResourceType.Ore:
+                for (int i = 0; i < oreStack.Count; ++i)
+                    oreStack[i].gameObject.SetActive(i < stack);
+                break;
+            case ResourceType.Handcuffs:
+                for (int i = 0; i < handcuffsStack.Count; ++i)
+                    handcuffsStack[i].gameObject.SetActive(i < stack);
+                break;
+            case ResourceType.Money:
+                for (int i = 0; i < moneyStack.Count; ++i)
+                    moneyStack[i].gameObject.SetActive(i < stack);
+                break;
+        }
     }
 
-    public void AddOre()
+    public void AddResource(ResourceType type)
     {
-        UpdateOreStack(++oreCount);
+        switch (type)
+        {
+            case ResourceType.Ore:
+                UpdateResourceStack(type, ++oreCount);
+                break;
+            case ResourceType.Handcuffs:
+                UpdateResourceStack(type, ++handcuffsCount);
+                break;
+            case ResourceType.Money:
+                UpdateResourceStack(type, ++moneyCount);
+                break;
+        }
     }
 
-    public void SubOre()
+    public void SubResrouce(ResourceType type)
     {
-        --oreCount;
+        switch (type)
+        {
+            case ResourceType.Ore:
+                --oreCount;
+                break;
+            case ResourceType.Handcuffs:
+                --handcuffsCount;
+                break;
+            case ResourceType.Money:
+                --moneyCount;
+                break;
+        }
     }
 
-    public PortableResource GetTopOre()
+    public PortableResource GetPoppedResource(ResourceType type)
     {
-        return oreStack[oreCount];
+        switch (type)
+        {
+            case ResourceType.Ore:
+                return oreStack[oreCount];
+            case ResourceType.Handcuffs:
+                return handcuffsStack[handcuffsCount];
+            case ResourceType.Money:
+                return moneyStack[moneyCount];
+        }
+
+        return null;
+    }
+
+    public PortableResource GetCurrentTopResource(ResourceType type)
+    {
+        switch (type)
+        {
+            case ResourceType.Ore:
+                return oreCount > 0 ? oreStack[oreCount - 1] : null;
+            case ResourceType.Handcuffs:
+                return handcuffsCount > 0 ? handcuffsStack[handcuffsCount - 1] : null;
+            case ResourceType.Money:
+                return moneyCount > 0 ? moneyStack[moneyCount - 1] : null;
+        }
+
+        return null;
     }
 
     public int OreCount => oreCount;
+    public int HandcuffsCount => handcuffsCount;
     public int MoneyCount => moneyCount;
 }

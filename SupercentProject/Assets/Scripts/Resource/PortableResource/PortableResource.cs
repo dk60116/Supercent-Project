@@ -5,9 +5,6 @@ using UnityEngine;
 
 public abstract class PortableResource : MonoBehaviour
 {
-    [SerializeField]
-    private Vector3 originScale = Vector3.one;
-
     private Vector3 originalLocalPosition;
     private Quaternion originalLocalRotation;
 
@@ -26,8 +23,8 @@ public abstract class PortableResource : MonoBehaviour
 
         var sequence = DOTween.Sequence();
 
-        sequence.Append(transform.DOScale(originScale * 1.5f, 0.2f));
-        sequence.Append(transform.DOScale(originScale, 0.1f));
+        sequence.Append(transform.DOScale(Vector3.one * 1.5f, 0.2f));
+        sequence.Append(transform.DOScale(Vector3.one, 0.1f));
     }
 
     public void PlayTransferAnimation(Vector3 start, Vector3 target, Vector3 targetRot, float duration, GameObject ableObject)
@@ -35,15 +32,13 @@ public abstract class PortableResource : MonoBehaviour
         transform.position = start;
         transform.eulerAngles = targetRot;
         transform.DOKill();
-        transform.DOMove(target, duration)
-            .OnComplete(() =>
+        transform.DOMove(target, duration).
+            OnComplete(() =>
             {
                 ResetToOriginTransform();
-                transform.localScale = originScale;
+                transform.localScale = Vector3.one;
                 gameObject.SetActive(false);
-
-                if (ableObject != null)
-                    ableObject.SetActive(true);
+                ableObject.SetActive(true);
             });
     }
 

@@ -2,16 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class EnterArea : MonoBehaviour
+public class EnterArea_Output : MonoBehaviour
 {
     [SerializeField]
     ProcessObject pObject;
-
     void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
-            pObject.EnterInputAreaEvent();
+            pObject.EnterOutputAreaEvent();
         }
     }
 
@@ -19,7 +18,7 @@ public class EnterArea : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            pObject.OutInputAreaEvent();
+            pObject.OutOutputAreaEvent();
         }
     }
 }

@@ -1,0 +1,8 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\ProcessStack\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\ProcessStack\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\Temp\bin\ProcessStack\Assembly-CSharp-firstpass.pdb
+C:\Git\SupercentProject\SupercentProject\obj_process_stack\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_process_stack\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_process_stack\Debug\Assembly.44154EF1.Up2Date
+C:\Git\SupercentProject\SupercentProject\obj_process_stack\Debug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\obj_process_stack\Debug\Assembly-CSharp.pdb
