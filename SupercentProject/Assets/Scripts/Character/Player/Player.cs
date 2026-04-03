@@ -3,22 +3,22 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[Serializable]
-public struct PlayerStatus
-{
-    public float pickingSpeed;
-}
 
 public class Player : Character
 {
-    [SerializeField]
-    private PlayerStatus playerStat;
-
     private PlayerController controller;
+
+    [SerializeField]
+    private List<MiningTool> miningToolList;
+    [SerializeField]
+    private MiningTool equipMiningTool;
 
     private void Awake()
     {
-        controller = GetComponent<PlayerController>();
+        controller = GetComponentInChildren<PlayerController>();
+
+        if (miningToolList.Count > 0)
+            ChangeMiningTool(0);
     }
 
     void Start()
@@ -31,6 +31,11 @@ public class Player : Character
         
     }
 
-    public PlayerStatus PlayerStatus => playerStat;
+    public void ChangeMiningTool(int idx)
+    {
+        equipMiningTool = miningToolList[idx];
+    }
+
     public PlayerController Controller => controller;
+    public MiningTool EquipMiningTool => equipMiningTool;
 }

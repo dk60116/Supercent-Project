@@ -16,25 +16,25 @@ public class PlayerCamera : MonoBehaviour
     private Quaternion fixedRotation;
     private float followDistance;
 
-    private void Awake()
+    void Awake()
     {
         fixedRotation = transform.rotation;
-        AssignTarget();
     }
 
-    private void Start()
+    void Start()
     {
+        target = GameManager.Instance.Player;
+
         if (target != null)
         {
             UpdateFollowDistance();
         }
     }
 
-    private void LateUpdate()
+    void LateUpdate()
     {
         if (target == null)
         {
-            AssignTarget();
 
             if (target == null)
             {
@@ -42,20 +42,11 @@ public class PlayerCamera : MonoBehaviour
             }
 
             UpdateFollowDistance();
+            Debug.Log("FFF");
         }
 
         transform.rotation = Quaternion.Euler(targetRotation);
         transform.position = target.transform.position - (transform.forward * followDistance) - (transform.up * downwardViewOffset);
-    }
-
-    private void AssignTarget()
-    {
-        if (GameManager.Instance == null)
-        {
-            return;
-        }
-
-        target = GameManager.Instance.Player;
     }
 
     private void UpdateFollowDistance()

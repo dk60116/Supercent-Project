@@ -1,6 +1,9 @@
+using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Burst.CompilerServices;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -8,6 +11,7 @@ public class PlayerController : MonoBehaviour
     private static readonly int PickingHash = Animator.StringToHash("tPicking");
     private static readonly int PickStateHash = Animator.StringToHash("Base Layer.Pick");
     private static readonly int PickRunStateHash = Animator.StringToHash("Base Layer.PickRun");
+    private const int MaxTickMiningDebugTargets = 16;
 
     [Header("Protable Resource Stack")]
     [SerializeField]
@@ -15,6 +19,9 @@ public class PlayerController : MonoBehaviour
 
     int maxOre, maxMoney;
     int oreCount, moneyCount;
+
+    [SerializeField]
+    private Image maxIcon;
 
     [Header("Mining Box Debug")]
     [SerializeField]
@@ -32,12 +39,29 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private Color blockedRayColor = Color.red;
 
+    [Header("Tick Mining Debug")]
+    [SerializeField]
+    private bool showTickMiningDebug = true;
+    [SerializeField]
+    private float tickMiningHeight = 0.5f;
+    [SerializeField]
+    private float tickMiningBack = 0.25f;
+    [SerializeField]
+    private float tickMiningDistance = 0.5f;
+    [SerializeField]
+    private Color tickMiningIdleColor = Color.cyan;
+    [SerializeField]
+    private Color tickMiningOreColor = Color.magenta;
+    [SerializeField]
+    private Color tickMiningBlockedColor = Color.red;
+
     private Player player;
     private bool pickTriggerPending;
     private bool wasPickingAnimationPlaying;
+    private Coroutine ableMaxIconCoroutine;
+    private readonly Collider[] tickMiningDebugColliders = new Collider[MaxTickMiningDebugTargets];
+    private readonly Vector3[] tickMiningDebugOrePositions = new Vector3[MaxTickMiningDebugTargets];
 
-    [SerializeField, ReadOnly]
-    private float tickTime;
     [SerializeField, ReadOnly]
     private bool isHittingOre;
     [SerializeField, ReadOnly]
@@ -53,14 +77,25 @@ public class PlayerController : MonoBehaviour
 
     private Resource lockedOre;
 
+    [SerializeField, ReadOnly]
+    private float tickTime;
+    [SerializeField, ReadOnly]
+    private Vector3 tickMiningCenter;
+    [SerializeField, ReadOnly]
+    private int tickMiningOverlapCount;
+    [SerializeField, ReadOnly]
+    private int tickMiningOreCount;
+
     private void Awake()
     {
-        player = GetComponent<Player>();
+        player = GetComponentInParent<Player>();
 
         for (int i = 0; i < oreStack.Count; ++i)
             oreStack[i].gameObject.SetActive(false);
         for (int i = 0; i < moneyStack.Count; ++i)
             moneyStack[i].gameObject.SetActive(false);
+
+        maxIcon.gameObject.SetActive(false);
     }
 
     private void Update()
@@ -70,78 +105,173 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        UpdatePickingState();
         MovePlayer();
+        TickMining();
+    }
 
-        tickTime += Time.deltaTime;
-
-        Vector3 rayOrigin = GetMiningRayOrigin();
-        Vector3 rayDirection = transform.forward;
-        Quaternion boxOrientation = transform.rotation;
+    void TickMining()
+    {
         RaycastHit hit;
 
-        bool hasHit = Physics.BoxCast(rayOrigin, miningBoxHalfExtents, rayDirection, out hit, boxOrientation, miningRayDistance);
-        UpdateMiningRayDebug(rayOrigin, rayDirection, hasHit, hit);
+        tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
+        DebugDrawTickMining();
 
-        if (hasHit)
+        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, tickMiningDistance))
         {
             if (hit.collider.CompareTag("Ore"))
             {
-                Resource hitOre = hit.collider.GetComponent<Resource>();
-
-                if (hitOre != null && CanStartPick(hitOre))
+                if (tickTime == 0f || tickTime >= player.EquipMiningTool.Status.pickingDelay)
                 {
-                    StartPick(hitOre);
+                    tickTime = 0f;
+                    player.Animator.SetTrigger("tPicking");
                 }
+
+                tickTime += Time.deltaTime;
+            }
+            else
+            {
+                tickTime = 0f;
+                player.Animator.ResetTrigger("tPicking");
             }
         }
-    }
-
-    private void StartPick(Resource targetOre)
-    {
-        lockedOre = targetOre;
-        lockedOreName = targetOre.name;
-        pickTriggerPending = true;
-        if (player.Animator != null)
+        else
         {
-            player.Animator.SetTrigger(PickingHash);
+            tickTime = 0f;
+            player.Animator.ResetTrigger("tPicking");
         }
     }
 
-    private bool CanStartPick(Resource hitOre)
+    private void DebugDrawTickMining()
     {
-        if (hitOre == null)
+        debugRayOrigin = tickMiningCenter;
+        debugRayEnd = tickMiningCenter + transform.forward.normalized * tickMiningDistance;
+        debugHitPoint = debugRayEnd;
+        hitTargetName = string.Empty;
+        lockedOreName = string.Empty;
+        isHittingOre = false;
+        tickMiningOverlapCount = 0;
+        tickMiningOreCount = 0;
+
+        for (int i = 0; i < tickMiningDebugOrePositions.Length; ++i)
         {
-            return false;
+            tickMiningDebugOrePositions[i] = Vector3.zero;
         }
 
-        return lockedOre == null && !pickTriggerPending && !wasPickingAnimationPlaying;
-    }
+        if (showTickMiningDebug)
+        {
+            tickMiningOverlapCount = Physics.OverlapSphereNonAlloc(tickMiningCenter, tickMiningDistance, tickMiningDebugColliders);
 
-    private void LateUpdate()
-    {
-    }
+            for (int i = 0; i < tickMiningOverlapCount; ++i)
+            {
+                Collider overlap = tickMiningDebugColliders[i];
+                if (overlap == null)
+                {
+                    continue;
+                }
 
-    private void OnDrawGizmosSelected()
-    {
-        if (!showMiningRayDebug)
+                if (overlap.CompareTag("Ore") && tickMiningOreCount < tickMiningDebugOrePositions.Length)
+                {
+                    tickMiningDebugOrePositions[tickMiningOreCount++] = overlap.bounds.ClosestPoint(tickMiningCenter);
+                }
+
+                tickMiningDebugColliders[i] = null;
+            }
+        }
+
+        RaycastHit debugHit;
+        if (Physics.Raycast(tickMiningCenter, transform.forward * tickMiningDistance, out debugHit))
+        {
+            debugHitPoint = debugHit.point;
+            hitTargetName = debugHit.collider.name;
+            isHittingOre = debugHit.collider.CompareTag("Ore");
+            if (isHittingOre)
+            {
+                lockedOreName = debugHit.collider.name;
+            }
+        }
+
+        if (!showTickMiningDebug)
         {
             return;
         }
 
-        Vector3 rayOrigin = Application.isPlaying ? debugRayOrigin : GetMiningRayOrigin();
-        Vector3 rayEnd = Application.isPlaying ? debugRayEnd : rayOrigin + transform.forward * miningRayDistance;
-        Color rayColor = Application.isPlaying ? GetDebugRayColor() : defaultRayColor;
+        Color rayColor = isHittingOre
+            ? tickMiningOreColor
+            : string.IsNullOrEmpty(hitTargetName) ? tickMiningIdleColor : tickMiningBlockedColor;
 
-        Gizmos.color = rayColor;
-        Gizmos.DrawLine(rayOrigin, rayEnd);
-        DrawDebugBox(rayOrigin, rayColor);
-        DrawDebugBox(rayEnd, rayColor);
+        Vector3 rayTarget = string.IsNullOrEmpty(hitTargetName) ? debugRayEnd : debugHitPoint;
+        Debug.DrawLine(debugRayOrigin, rayTarget, rayColor);
+        Debug.DrawRay(debugRayOrigin, Vector3.up * 0.15f, tickMiningIdleColor);
 
-        if (Application.isPlaying && !string.IsNullOrEmpty(hitTargetName))
+        if (!string.IsNullOrEmpty(hitTargetName))
+        {
+            Debug.DrawRay(debugHitPoint, Vector3.up * 0.2f, rayColor);
+        }
+    }
+
+    private void PicikingEvent_Pickaxe()
+    {
+        RaycastHit hit;
+
+        tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
+        
+        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, tickMiningDistance))
+        {
+            if (hit.collider.CompareTag("Ore"))
+            {
+                hit.collider.GetComponent<Resource>().GetResource();
+
+                if (oreCount >= player.EquipMiningTool.Status.maxOre)
+                    TryStartAbleMaxIconCoroutine();
+            }
+        }
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (!showTickMiningDebug)
+        {
+            return;
+        }
+
+        Vector3 center = Application.isPlaying ? tickMiningCenter : transform.position + Vector3.up * tickMiningHeight;
+        Color gizmoColor = tickMiningIdleColor;
+        if (Application.isPlaying)
+        {
+            gizmoColor = isHittingOre
+                ? tickMiningOreColor
+                : string.IsNullOrEmpty(hitTargetName) ? tickMiningIdleColor : tickMiningBlockedColor;
+        }
+
+        Gizmos.color = gizmoColor;
+        Gizmos.DrawWireSphere(center, tickMiningDistance);
+        Gizmos.DrawLine(Application.isPlaying ? debugRayOrigin : center, Application.isPlaying ? debugRayEnd : center + transform.forward.normalized * tickMiningDistance);
+
+        if (!Application.isPlaying)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(hitTargetName))
         {
             Gizmos.DrawSphere(debugHitPoint, 0.05f);
         }
+
+        int drawCount = Mathf.Min(tickMiningOreCount, tickMiningDebugOrePositions.Length);
+        for (int i = 0; i < drawCount; ++i)
+        {
+            Vector3 orePosition = tickMiningDebugOrePositions[i];
+            Gizmos.DrawLine(center, orePosition);
+            Gizmos.DrawSphere(orePosition, 0.05f);
+        }
+    }
+
+    void OnTriggerStay(Collider other)
+    {
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
     }
 
     private Vector3 GetMoveDirection(Vector2 input)
@@ -178,116 +308,46 @@ public class PlayerController : MonoBehaviour
         }
 
         Vector3 moveDirection = GetMoveDirection(input);
-        transform.position += moveDirection * player.Status.moveSpeed * Time.deltaTime;
+        transform.parent.position += moveDirection * player.Status.moveSpeed * Time.deltaTime;
 
         Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, player.Status.rotationSpeed * Time.deltaTime);
+        transform.parent.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, player.Status.rotationSpeed * Time.deltaTime);
     }
 
-    private void UpdatePickingState()
+    private void TryStartAbleMaxIconCoroutine()
     {
-        bool isPickingAnimationPlaying = IsPickingAnimationPlaying();
-
-        if (isPickingAnimationPlaying && !wasPickingAnimationPlaying)
-        {
-            pickTriggerPending = false;
-        }
-
-        if (!isPickingAnimationPlaying && wasPickingAnimationPlaying)
-        {
-            CompletePick();
-        }
-
-        wasPickingAnimationPlaying = isPickingAnimationPlaying;
-    }
-
-    private bool IsPickingAnimationPlaying()
-    {
-        if (player.Animator == null)
-        {
-            return false;
-        }
-
-        AnimatorStateInfo currentState = player.Animator.GetCurrentAnimatorStateInfo(0);
-        if (IsPickState(currentState))
-        {
-            return true;
-        }
-
-        if (player.Animator.IsInTransition(0))
-        {
-            AnimatorStateInfo nextState = player.Animator.GetNextAnimatorStateInfo(0);
-            return IsPickState(nextState);
-        }
-
-        return false;
-    }
-
-    private static bool IsPickState(AnimatorStateInfo stateInfo)
-    {
-        return stateInfo.fullPathHash == PickStateHash || stateInfo.fullPathHash == PickRunStateHash;
-    }
-
-    private void CompletePick()
-    {
-        if (lockedOre != null && lockedOre.gameObject.activeInHierarchy)
-        {
-            lockedOre.GetResource();
-        }
-
-        lockedOre = null;
-        lockedOreName = string.Empty;
-        pickTriggerPending = false;
-    }
-
-    private Vector3 GetMiningRayOrigin()
-    {
-        return transform.position + Vector3.up * miningRayHeight;
-    }
-
-    private void UpdateMiningRayDebug(Vector3 rayOrigin, Vector3 rayDirection, bool hasHit, RaycastHit hit)
-    {
-        debugRayOrigin = rayOrigin;
-        debugRayEnd = rayOrigin + rayDirection * (hasHit ? hit.distance : miningRayDistance);
-        debugHitPoint = hasHit ? hit.point : debugRayEnd;
-        hitTargetName = hasHit ? hit.collider.name : string.Empty;
-        isHittingOre = hasHit && hit.collider.CompareTag("Ore");
-
-        if (!showMiningRayDebug)
+        if (ableMaxIconCoroutine != null)
         {
             return;
         }
 
-        Debug.DrawLine(rayOrigin, debugRayEnd, GetDebugRayColor(), 0f, false);
+        ableMaxIconCoroutine = StartCoroutine(AbleMaxIconCoroutine());
     }
 
-    private Color GetDebugRayColor()
+    private IEnumerator AbleMaxIconCoroutine()
     {
-        if (isHittingOre)
-        {
-            return oreHitRayColor;
-        }
+        maxIcon.gameObject.SetActive(true);
+        Color color = maxIcon.color;
+        color.a = 0;
+        maxIcon.color = color;
+        maxIcon.rectTransform.anchoredPosition = Vector2.zero;
 
-        if (!string.IsNullOrEmpty(hitTargetName))
-        {
-            return blockedRayColor;
-        }
+        float ableTime = 1f;
 
-        return defaultRayColor;
-    }
+        maxIcon.DOKill();
+        maxIcon.DOFade(ableTime, ableTime);
+        maxIcon.rectTransform.DOAnchorPosY(maxIcon.rectTransform.anchoredPosition.y + 100, ableTime);
 
-    private void DrawDebugBox(Vector3 center, Color color)
-    {
-        Matrix4x4 previousMatrix = Gizmos.matrix;
-        Gizmos.color = color;
-        Gizmos.matrix = Matrix4x4.TRS(center, transform.rotation, Vector3.one);
-        Gizmos.DrawWireCube(Vector3.zero, miningBoxHalfExtents * 2f);
-        Gizmos.matrix = previousMatrix;
+        yield return new WaitForSeconds(ableTime);
+
+        maxIcon.gameObject.SetActive(false);
+        ableMaxIconCoroutine = null;
     }
 
     void UpdateOreStack(int stack)
     {
-        oreStack[stack - 1].gameObject.SetActive(true);
+        for (int i = 0; i < oreStack.Count; ++i)
+            oreStack[i].gameObject.SetActive(i < stack);
     }
 
     public void AddOre()
@@ -297,9 +357,14 @@ public class PlayerController : MonoBehaviour
 
     public void SubOre()
     {
-        UpdateOreStack(--oreCount);
+        --oreCount;
     }
 
-    int OreCount => oreCount;
-    int MoneyCount => moneyCount;
+    public PortableResource GetTopOre()
+    {
+        return oreStack[oreCount];
+    }
+
+    public int OreCount => oreCount;
+    public int MoneyCount => moneyCount;
 }

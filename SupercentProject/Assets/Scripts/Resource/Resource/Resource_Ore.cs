@@ -21,8 +21,12 @@ public class Resource_Ore : Resource
 
     public override void GetResource()
     {
+        Player player = GameManager.Instance.Player;
+
         colliderTrigger.enabled = false;
         renderObj.SetActive(false);
-        GameManager.Instance.Player.Controller.AddOre();
+
+        if (player.Controller.OreCount < player.EquipMiningTool.Status.maxOre)
+            player.Controller.AddOre();
     }
 }
