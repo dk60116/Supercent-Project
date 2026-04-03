@@ -10,6 +10,9 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private Player player;
 
+    [SerializeField]
+    private WaitingLine waitLine;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -30,4 +33,5 @@ public class GameManager : MonoBehaviour
     }
 
     public Player Player => player;
+    public WaitingLine WaitingLine => waitLine;
 }

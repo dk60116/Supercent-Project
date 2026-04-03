@@ -350,6 +350,7 @@ MonoBehaviour:
     moveSpeed: 2
     rotationSpeed: 720
   animator: {fileID: 2854579595911475480}
+  navAgent: {fileID: 0}
   miningToolList:
   - {fileID: 5153498093601523190}
   - {fileID: 6106503007100104301}
@@ -375,7 +376,7 @@ NavMeshAgent:
   m_Height: 1
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
+  m_ObstacleAvoidanceType: 0
 --- !u!135 &7167705431892389336
 SphereCollider:
   m_ObjectHideFlags: 0

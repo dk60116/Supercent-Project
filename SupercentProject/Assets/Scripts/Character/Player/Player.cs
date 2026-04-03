@@ -14,8 +14,10 @@ public class Player : Character
     private MiningTool equipMiningTool;
 
 
-    private void Awake()
+    protected new void Awake()
     {
+        base.Awake();
+
         controller = GetComponentInChildren<PlayerController>();
 
         if (miningToolList.Count > 0)

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 [Serializable]
 public struct CharacterStatus 
@@ -23,10 +24,12 @@ public abstract class Character : BaseObject
 
     [SerializeField]
     protected Animator animator;
+    [SerializeField, ReadOnly]
+    protected NavMeshAgent navAgent;
 
-    void Start()
+    protected void Awake()
     {
-        
+        navAgent = GetComponent<NavMeshAgent>();
     }
 
     void Update()

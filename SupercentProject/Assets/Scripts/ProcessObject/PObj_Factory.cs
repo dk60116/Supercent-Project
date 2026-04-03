@@ -17,4 +17,5 @@ public class PObj_Factory : ProcessObject
     }
 
     public bool ProcessRunning => processRunning;
+    public int InputCount => inputCount;
 }
