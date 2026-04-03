@@ -13,17 +13,19 @@ public class PlayerController : MonoBehaviour
     private static readonly int PickRunStateHash = Animator.StringToHash("Base Layer.PickRun");
     private const int MaxTickMiningDebugTargets = 16;
 
-    [Header("Protable Resource Stack")]
     [SerializeField]
-    List<PortableResource> oreStack, handcuffsStack, moneyStack;
+    private List<PortableResource> oreStack, handcuffsStack, moneyStack;
+    [SerializeField]
+    private GameObject oreHolder, handcuffsHolder, moneyHodler;
 
-    int maxOre, maxHandcuff, maxMoney;
-    int oreCount, handcuffsCount, moneyCount;
+    [SerializeField, ReadOnly]
+    private int maxOre, maxHandcuff, maxMoney;
+    [SerializeField, ReadOnly]
+    private int oreCount, handcuffsCount, moneyCount;
 
     [SerializeField]
     private Image maxIcon;
 
-    [Header("Mining Box Debug")]
     [SerializeField]
     private bool showMiningRayDebug = true;
     [SerializeField]
@@ -46,8 +48,6 @@ public class PlayerController : MonoBehaviour
     private float tickMiningHeight = 0.5f;
     [SerializeField]
     private float tickMiningBack = 0.25f;
-    [SerializeField]
-    private float tickMiningDistance = 0.5f;
     [SerializeField]
     private Color tickMiningIdleColor = Color.cyan;
     [SerializeField]
@@ -74,6 +74,11 @@ public class PlayerController : MonoBehaviour
     private Vector3 debugHitPoint;
     [SerializeField, ReadOnly]
     private string lockedOreName;
+
+    [SerializeField, ReadOnly]
+    private bool enterMine;
+    [SerializeField, ReadOnly]
+    private bool enterOre;
 
     private Resource lockedOre;
 
@@ -108,7 +113,18 @@ public class PlayerController : MonoBehaviour
         }
 
         MovePlayer();
-        TickMining();
+
+        if (enterMine)
+            TickMining();
+    }
+
+    public void EnterMine(bool enter)
+    {
+        enterMine = enter;
+        
+        player.TakeMiningTool(enterMine);
+
+        handcuffsHolder.SetActive(!enterMine);
     }
 
     void TickMining()
@@ -118,26 +134,34 @@ public class PlayerController : MonoBehaviour
         tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
         DebugDrawTickMining();
 
-        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, tickMiningDistance))
+        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, player.EquipMiningTool.Status.rnage))
         {
             if (hit.collider.CompareTag("Ore"))
             {
+                enterOre = true;
+
                 if (tickTime == 0f || tickTime >= player.EquipMiningTool.Status.pickingDelay)
                 {
                     tickTime = 0f;
-                    player.Animator.SetTrigger("tPicking");
+
+                    if (player.GetToolType() == MiningToolType.Pickaxe)
+                        player.Animator.SetTrigger("tPicking");
+                    else if (player.GetToolType() == MiningToolType.Screw)
+                        PickingEvent_Screw();
                 }
 
                 tickTime += Time.deltaTime;
             }
             else
             {
+                enterOre = false;
                 tickTime = 0f;
                 player.Animator.ResetTrigger("tPicking");
             }
         }
         else
         {
+            enterOre = false;
             tickTime = 0f;
             player.Animator.ResetTrigger("tPicking");
         }
@@ -146,7 +170,7 @@ public class PlayerController : MonoBehaviour
     private void DebugDrawTickMining()
     {
         debugRayOrigin = tickMiningCenter;
-        debugRayEnd = tickMiningCenter + transform.forward.normalized * tickMiningDistance;
+        debugRayEnd = tickMiningCenter + transform.forward.normalized * player.EquipMiningTool.Status.rnage;
         debugHitPoint = debugRayEnd;
         hitTargetName = string.Empty;
         lockedOreName = string.Empty;
@@ -161,7 +185,7 @@ public class PlayerController : MonoBehaviour
 
         if (showTickMiningDebug)
         {
-            tickMiningOverlapCount = Physics.OverlapSphereNonAlloc(tickMiningCenter, tickMiningDistance, tickMiningDebugColliders);
+            tickMiningOverlapCount = Physics.OverlapSphereNonAlloc(tickMiningCenter, player.EquipMiningTool.Status.rnage, tickMiningDebugColliders);
 
             for (int i = 0; i < tickMiningOverlapCount; ++i)
             {
@@ -181,7 +205,7 @@ public class PlayerController : MonoBehaviour
         }
 
         RaycastHit debugHit;
-        if (Physics.Raycast(tickMiningCenter, transform.forward * tickMiningDistance, out debugHit))
+        if (Physics.Raycast(tickMiningCenter, transform.forward * player.EquipMiningTool.Status.rnage, out debugHit))
         {
             debugHitPoint = debugHit.point;
             hitTargetName = debugHit.collider.name;
@@ -211,16 +235,40 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void PicikingEvent_Pickaxe()
+    private void PickingEvent_Pickaxe()
     {
         RaycastHit hit;
 
         tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
         
-        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, tickMiningDistance))
+        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, player.EquipMiningTool.Status.rnage))
         {
             if (hit.collider.CompareTag("Ore"))
             {
+                hit.collider.GetComponent<Resource>().GetResource();
+
+                if (oreCount >= player.EquipMiningTool.Status.maxOre)
+                    TryStartAbleMaxIconCoroutine();
+            }
+        }
+    }
+
+    private void PickingEvent_Screw()
+    {
+        RaycastHit hit;
+        Screw screw = player.EquipMiningTool as Screw;
+
+        tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
+
+        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, player.EquipMiningTool.Status.rnage))
+        {
+            if (hit.collider.CompareTag("Ore"))
+            {
+                if (screw != null)
+                {
+                    screw.ActivateRotation();
+                }
+
                 hit.collider.GetComponent<Resource>().GetResource();
 
                 if (oreCount >= player.EquipMiningTool.Status.maxOre)
@@ -246,8 +294,8 @@ public class PlayerController : MonoBehaviour
         }
 
         Gizmos.color = gizmoColor;
-        Gizmos.DrawWireSphere(center, tickMiningDistance);
-        Gizmos.DrawLine(Application.isPlaying ? debugRayOrigin : center, Application.isPlaying ? debugRayEnd : center + transform.forward.normalized * tickMiningDistance);
+        Gizmos.DrawWireSphere(center, player.EquipMiningTool.Status.rnage);
+        Gizmos.DrawLine(Application.isPlaying ? debugRayOrigin : center, Application.isPlaying ? debugRayEnd : center + transform.forward.normalized * player.EquipMiningTool.Status.rnage);
 
         if (!Application.isPlaying)
         {
@@ -346,6 +394,21 @@ public class PlayerController : MonoBehaviour
         ableMaxIconCoroutine = null;
     }
 
+    public int GetResourceCount(ResourceType type)
+    {
+        switch (type)
+        {
+            case ResourceType.Ore:
+                return oreCount;
+            case ResourceType.Handcuffs:
+                return handcuffsCount;
+            case ResourceType.Money:
+                return moneyCount;
+        }
+
+        return 0;
+    }
+
     void UpdateResourceStack(ResourceType type, int stack)
     {
         switch (type)
@@ -427,7 +490,8 @@ public class PlayerController : MonoBehaviour
         return null;
     }
 
-    public int OreCount => oreCount;
     public int HandcuffsCount => handcuffsCount;
     public int MoneyCount => moneyCount;
+    public bool IsEnterMine => enterMine; 
+    public bool IsEnterOre => enterOre;
 }

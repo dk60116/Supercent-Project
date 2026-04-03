@@ -48,7 +48,9 @@ MonoBehaviour:
   objectName: Pickaxe
   status:
     maxOre: 10
-    pickingDelay: 0.5
+    pickingDelay: 0.3
+    rnage: 1
+  type: 0
 --- !u!1001 &7470605354871578734
 PrefabInstance:
   m_ObjectHideFlags: 0

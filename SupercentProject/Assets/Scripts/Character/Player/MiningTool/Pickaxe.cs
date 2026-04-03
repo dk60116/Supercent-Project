@@ -4,13 +4,8 @@ using UnityEngine;
 
 public class Pickaxe : MiningTool
 {
-    void Start()
+    void Awake()
     {
-        
-    }
-
-    void Update()
-    {
-        
+        type = MiningToolType.Pickaxe;
     }
 }

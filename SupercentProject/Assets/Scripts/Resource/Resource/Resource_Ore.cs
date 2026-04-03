@@ -14,9 +14,8 @@ public class Resource_Ore : Resource
     {
     }
 
-    void Update()
+    protected void Update()
     {
-        
     }
 
     public override void GetResource()
@@ -26,7 +25,7 @@ public class Resource_Ore : Resource
         colliderTrigger.enabled = false;
         renderObj.SetActive(false);
 
-        if (player.Controller.OreCount < player.EquipMiningTool.Status.maxOre)
+        if (player.Controller.GetResourceCount(ResourceType.Ore) < player.EquipMiningTool.Status.maxOre)
             player.Controller.AddResource(ResourceType.Ore);
     }
 }

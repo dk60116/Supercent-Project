@@ -3,19 +3,23 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum MiningToolType { Pickaxe, Screw, Excavator }; 
+public enum MiningToolType { None, Pickaxe, Screw, Excavator }; 
 
 [Serializable]
 public struct MiningToolStatus
 {
     public int maxOre;
     public float pickingDelay;
+    public float rnage;
 }
 
 public abstract class MiningTool : BaseObject
 {
     [SerializeField]
-    private MiningToolStatus status;
+    protected MiningToolStatus status;
+    [SerializeField, ReadOnly]
+    protected MiningToolType type;
 
     public MiningToolStatus Status => status;
+    public MiningToolType Type => type;
 }

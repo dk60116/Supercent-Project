@@ -13,12 +13,15 @@ public class Player : Character
     [SerializeField, ReadOnly]
     private MiningTool equipMiningTool;
 
+
     private void Awake()
     {
         controller = GetComponentInChildren<PlayerController>();
 
         if (miningToolList.Count > 0)
             ChangeMiningTool(MiningToolType.Screw);
+
+        TakeMiningTool(false);
     }
 
     void Start()
@@ -35,6 +38,8 @@ public class Player : Character
     {
         switch (type)
         {
+            case MiningToolType.None:
+                break;
             case MiningToolType.Pickaxe:
                 equipMiningTool = miningToolList[0];
                 break;
@@ -45,6 +50,45 @@ public class Player : Character
                 equipMiningTool = miningToolList[2];
                 break;
         }
+    }
+
+    public void TakeMiningTool(bool value)
+    {
+        for (int i = 0; i < miningToolList.Count; ++i)
+            miningToolList[i].gameObject.SetActive(false);
+
+        equipMiningTool.gameObject.SetActive(value);
+
+        if (!controller.IsEnterMine)
+        {
+            animator.SetFloat("fEquip", 0f);
+            return;
+        }
+
+        int type = 0;
+
+        switch (GetToolType())
+        {
+            case MiningToolType.None:
+                type = 0;
+                break;
+            case MiningToolType.Pickaxe:
+                type = 0;
+                break;
+            case MiningToolType.Screw:
+                type = 1;
+                break;
+            case MiningToolType.Excavator:
+                type = 2;
+                break;
+        }
+
+        animator.SetFloat("fEquip", type);
+    }
+
+    public MiningToolType GetToolType()
+    {
+        return equipMiningTool.Type;
     }
 
     public PlayerController Controller => controller;

@@ -17580,7 +17580,7 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0.26666668
-    functionName: PicikingEvent_Pickaxe
+    functionName: PickingEvent_Pickaxe
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

@@ -42,10 +42,10 @@ public abstract class ProcessObject : BaseObject
         {
             if (tickTIme == 0f || tickTIme >= 0.1f)
             {
-                if (enterInput && GameManager.Instance.Player.Controller.OreCount > 0)
+                if (enterInput && GameManager.Instance.Player.Controller.GetResourceCount(inputResourceType) > 0)
                 {
                     GameManager.Instance.Player.Controller.SubResrouce(inputResourceType);
-                    AddInputStack();
+                    AddInputResource();
                 }
 
                 if (enterOutput && outputCount > 0)
@@ -83,7 +83,7 @@ public abstract class ProcessObject : BaseObject
         enterOutput = false;
     }
 
-    virtual protected void AddInputStack()
+    virtual protected void AddInputResource()
     {
         PortableResource sourceResource = GameManager.Instance.Player.Controller.GetPoppedResource(inputResourceType);
         PortableResource targetResource = GetNextInputResource();

@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-[CustomEditor(typeof(RandomRotate))]
+[CustomEditor(typeof(OreArea))]
 [CanEditMultipleObjects]
 public class RandomRotateEditor : Editor
 {
@@ -20,7 +20,7 @@ public class RandomRotateEditor : Editor
 
         foreach (Object targetObject in targets)
         {
-            RandomRotate randomRotate = (RandomRotate)targetObject;
+            OreArea randomRotate = (OreArea)targetObject;
             List<Object> undoTargets = new List<Object>();
 
             for (int i = 0; i < randomRotate.transform.childCount; ++i)

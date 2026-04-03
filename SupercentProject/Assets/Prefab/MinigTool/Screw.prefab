@@ -49,6 +49,11 @@ MonoBehaviour:
   status:
     maxOre: 20
     pickingDelay: 0.25
+    rnage: 1.2
+  type: 0
+  drill: {fileID: 8520548108957847999}
+  rotateSpeed: 1080
+  rotateDuration: 0.5
 --- !u!1 &1786430121580531537
 GameObject:
   m_ObjectHideFlags: 0
