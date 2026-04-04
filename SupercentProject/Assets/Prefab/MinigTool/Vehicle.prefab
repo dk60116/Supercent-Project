@@ -48,8 +48,9 @@ MonoBehaviour:
   objectName: Vehicle
   status:
     maxOre: 30
-    pickingDelay: 0.2
+    pickingDelay: 0.1
     rnage: 1.5
+    width: 2
   type: 0
 --- !u!1001 &7425520358111004911
 PrefabInstance:

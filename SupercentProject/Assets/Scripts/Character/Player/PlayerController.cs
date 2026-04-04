@@ -73,6 +73,10 @@ public class PlayerController : MonoBehaviour
     [SerializeField, ReadOnly]
     private Vector3 debugHitPoint;
     [SerializeField, ReadOnly]
+    private Vector3 debugCastEndCenter;
+    [SerializeField, ReadOnly]
+    private bool debugUsesBoxCast;
+    [SerializeField, ReadOnly]
     private string lockedOreName;
 
     [SerializeField, ReadOnly]
@@ -131,10 +135,10 @@ public class PlayerController : MonoBehaviour
     {
         RaycastHit hit;
 
-        tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
+        tickMiningCenter = GetTickMiningCenter(tickMiningHeight);
         DebugDrawTickMining();
 
-        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, player.EquipMiningTool.Status.rnage))
+        if (TryGetTickMiningHit(out hit))
         {
             if (hit.collider.CompareTag("Ore"))
             {
@@ -177,11 +181,71 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private Vector3 GetTickMiningCenter(float height)
+    {
+        return transform.position + Vector3.up * height + transform.forward * -tickMiningBack;
+    }
+
+    private float GetMiningRange()
+    {
+        if (player != null && player.EquipMiningTool != null)
+        {
+            return player.EquipMiningTool.Status.rnage;
+        }
+
+        return miningRayDistance;
+    }
+
+    private Vector3 GetMiningBoxHalfExtents()
+    {
+        Vector3 halfExtents = miningBoxHalfExtents;
+
+        if (player != null && player.EquipMiningTool != null)
+        {
+            float miningWidth = player.EquipMiningTool.Status.width;
+            if (miningWidth > 0f)
+            {
+                halfExtents.x = miningWidth * 0.5f;
+            }
+        }
+
+        return halfExtents;
+    }
+
+    private bool IsVehicleMiningTool()
+    {
+        return player != null && player.GetToolType() == MiningToolType.Vehicle;
+    }
+
+    private bool TryGetTickMiningHit(out RaycastHit hit)
+    {
+        float miningRange = GetMiningRange();
+
+        if (IsVehicleMiningTool())
+        {
+            Vector3 boxHalfExtents = GetMiningBoxHalfExtents();
+
+            return Physics.BoxCast(
+                tickMiningCenter,
+                boxHalfExtents,
+                transform.forward,
+                out hit,
+                transform.rotation,
+                miningRange);
+        }
+
+        return Physics.Raycast(tickMiningCenter, transform.forward, out hit, miningRange);
+    }
+
     private void DebugDrawTickMining()
     {
+        float miningRange = GetMiningRange();
+
         debugRayOrigin = tickMiningCenter;
-        debugRayEnd = tickMiningCenter + transform.forward.normalized * player.EquipMiningTool.Status.rnage;
+        debugRayEnd = tickMiningCenter + transform.forward.normalized * miningRange;
         debugHitPoint = debugRayEnd;
+        debugCastEndCenter = debugRayEnd;
+        debugUsesBoxCast = IsVehicleMiningTool();
         hitTargetName = string.Empty;
         lockedOreName = string.Empty;
         isHittingOre = false;
@@ -195,7 +259,28 @@ public class PlayerController : MonoBehaviour
 
         if (showTickMiningDebug)
         {
-            tickMiningOverlapCount = Physics.OverlapSphereNonAlloc(tickMiningCenter, player.EquipMiningTool.Status.rnage, tickMiningDebugColliders);
+            if (debugUsesBoxCast)
+            {
+                Vector3 boxHalfExtents = GetMiningBoxHalfExtents();
+                Vector3 overlapCenter = tickMiningCenter + transform.forward.normalized * (miningRange * 0.5f);
+                Vector3 overlapHalfExtents = new Vector3(
+                    boxHalfExtents.x,
+                    boxHalfExtents.y,
+                    boxHalfExtents.z + miningRange * 0.5f);
+
+                tickMiningOverlapCount = Physics.OverlapBoxNonAlloc(
+                    overlapCenter,
+                    overlapHalfExtents,
+                    tickMiningDebugColliders,
+                    transform.rotation);
+            }
+            else
+            {
+                tickMiningOverlapCount = Physics.OverlapSphereNonAlloc(
+                    tickMiningCenter,
+                    miningRange,
+                    tickMiningDebugColliders);
+            }
 
             for (int i = 0; i < tickMiningOverlapCount; ++i)
             {
@@ -215,9 +300,10 @@ public class PlayerController : MonoBehaviour
         }
 
         RaycastHit debugHit;
-        if (Physics.Raycast(tickMiningCenter, transform.forward * player.EquipMiningTool.Status.rnage, out debugHit))
+        if (TryGetTickMiningHit(out debugHit))
         {
             debugHitPoint = debugHit.point;
+            debugCastEndCenter = tickMiningCenter + transform.forward.normalized * debugHit.distance;
             hitTargetName = debugHit.collider.name;
             isHittingOre = debugHit.collider.CompareTag("Ore");
             if (isHittingOre)
@@ -239,10 +325,61 @@ public class PlayerController : MonoBehaviour
         Debug.DrawLine(debugRayOrigin, rayTarget, rayColor);
         Debug.DrawRay(debugRayOrigin, Vector3.up * 0.15f, tickMiningIdleColor);
 
+        if (debugUsesBoxCast)
+        {
+            Vector3 boxHalfExtents = GetMiningBoxHalfExtents();
+            Vector3 boxEndCenter = string.IsNullOrEmpty(hitTargetName) ? debugRayEnd : debugCastEndCenter;
+            DrawDebugWireBox(debugRayOrigin, transform.rotation, boxHalfExtents, rayColor);
+            DrawDebugWireBox(boxEndCenter, transform.rotation, boxHalfExtents, rayColor);
+            DrawDebugBoxCastSweep(debugRayOrigin, boxEndCenter, transform.rotation, boxHalfExtents, rayColor);
+        }
+
         if (!string.IsNullOrEmpty(hitTargetName))
         {
             Debug.DrawRay(debugHitPoint, Vector3.up * 0.2f, rayColor);
         }
+    }
+
+    private void DrawDebugBoxCastSweep(Vector3 startCenter, Vector3 endCenter, Quaternion rotation, Vector3 halfExtents, Color color)
+    {
+        Vector3 right = rotation * Vector3.right * halfExtents.x;
+        Vector3 up = rotation * Vector3.up * halfExtents.y;
+
+        Debug.DrawLine(startCenter + right + up, endCenter + right + up, color);
+        Debug.DrawLine(startCenter + right - up, endCenter + right - up, color);
+        Debug.DrawLine(startCenter - right + up, endCenter - right + up, color);
+        Debug.DrawLine(startCenter - right - up, endCenter - right - up, color);
+    }
+
+    private void DrawDebugWireBox(Vector3 center, Quaternion rotation, Vector3 halfExtents, Color color)
+    {
+        Vector3 right = rotation * Vector3.right * halfExtents.x;
+        Vector3 up = rotation * Vector3.up * halfExtents.y;
+        Vector3 forward = rotation * Vector3.forward * halfExtents.z;
+
+        Vector3 topFrontRight = center + right + up + forward;
+        Vector3 topFrontLeft = center - right + up + forward;
+        Vector3 topBackRight = center + right + up - forward;
+        Vector3 topBackLeft = center - right + up - forward;
+        Vector3 bottomFrontRight = center + right - up + forward;
+        Vector3 bottomFrontLeft = center - right - up + forward;
+        Vector3 bottomBackRight = center + right - up - forward;
+        Vector3 bottomBackLeft = center - right - up - forward;
+
+        Debug.DrawLine(topFrontRight, topFrontLeft, color);
+        Debug.DrawLine(topFrontLeft, topBackLeft, color);
+        Debug.DrawLine(topBackLeft, topBackRight, color);
+        Debug.DrawLine(topBackRight, topFrontRight, color);
+
+        Debug.DrawLine(bottomFrontRight, bottomFrontLeft, color);
+        Debug.DrawLine(bottomFrontLeft, bottomBackLeft, color);
+        Debug.DrawLine(bottomBackLeft, bottomBackRight, color);
+        Debug.DrawLine(bottomBackRight, bottomFrontRight, color);
+
+        Debug.DrawLine(topFrontRight, bottomFrontRight, color);
+        Debug.DrawLine(topFrontLeft, bottomFrontLeft, color);
+        Debug.DrawLine(topBackLeft, bottomBackLeft, color);
+        Debug.DrawLine(topBackRight, bottomBackRight, color);
     }
 
     private void PickingEvent_Pickaxe()
@@ -290,19 +427,21 @@ public class PlayerController : MonoBehaviour
     private void PickingEvent_Vehicle()
     {
         RaycastHit hit;
-        Screw screw = player.EquipMiningTool as Screw;
 
         tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
 
-        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, player.EquipMiningTool.Status.rnage))
+        if (Physics.BoxCast
+            (
+            tickMiningCenter,
+            GetMiningBoxHalfExtents(),
+            transform.forward,
+            out hit,
+            transform.rotation,
+            player.EquipMiningTool.Status.rnage)
+            )
         {
             if (hit.collider.CompareTag("Ore"))
             {
-                if (screw != null)
-                {
-                    screw.ActivateRotation();
-                }
-
                 hit.collider.GetComponent<Resource>().GetResource();
 
                 if (oreCount >= player.EquipMiningTool.Status.maxOre)
@@ -313,23 +452,47 @@ public class PlayerController : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        if (!showTickMiningDebug)
+        if (Application.isPlaying && !showTickMiningDebug)
         {
             return;
         }
 
-        Vector3 center = Application.isPlaying ? tickMiningCenter : transform.position + Vector3.up * tickMiningHeight;
-        Color gizmoColor = tickMiningIdleColor;
+        if (!Application.isPlaying && !showMiningRayDebug)
+        {
+            return;
+        }
+
+        float previewHeight = Application.isPlaying ? tickMiningHeight : miningRayHeight;
+        float previewRange = Application.isPlaying ? GetMiningRange() : miningRayDistance;
+        Vector3 center = Application.isPlaying ? tickMiningCenter : GetTickMiningCenter(previewHeight);
+        Vector3 endCenter = Application.isPlaying ? debugCastEndCenter : center + transform.forward.normalized * previewRange;
+        Vector3 boxHalfExtents = Application.isPlaying ? GetMiningBoxHalfExtents() : miningBoxHalfExtents;
+        bool useBoxCast = Application.isPlaying && debugUsesBoxCast;
+        Color gizmoColor = Application.isPlaying ? tickMiningIdleColor : defaultRayColor;
         if (Application.isPlaying)
         {
             gizmoColor = isHittingOre
                 ? tickMiningOreColor
                 : string.IsNullOrEmpty(hitTargetName) ? tickMiningIdleColor : tickMiningBlockedColor;
         }
+        else
+        {
+            gizmoColor = defaultRayColor;
+        }
 
         Gizmos.color = gizmoColor;
-        Gizmos.DrawWireSphere(center, player.EquipMiningTool.Status.rnage);
-        Gizmos.DrawLine(Application.isPlaying ? debugRayOrigin : center, Application.isPlaying ? debugRayEnd : center + transform.forward.normalized * player.EquipMiningTool.Status.rnage);
+
+        if (useBoxCast)
+        {
+            DrawGizmoWireBox(center, transform.rotation, boxHalfExtents);
+            DrawGizmoWireBox(endCenter, transform.rotation, boxHalfExtents);
+            Gizmos.DrawLine(center, endCenter);
+        }
+        else
+        {
+            Gizmos.DrawWireSphere(center, previewRange);
+            Gizmos.DrawLine(Application.isPlaying ? debugRayOrigin : center, Application.isPlaying ? debugRayEnd : center + transform.forward.normalized * previewRange);
+        }
 
         if (!Application.isPlaying)
         {
@@ -348,6 +511,14 @@ public class PlayerController : MonoBehaviour
             Gizmos.DrawLine(center, orePosition);
             Gizmos.DrawSphere(orePosition, 0.05f);
         }
+    }
+
+    private void DrawGizmoWireBox(Vector3 center, Quaternion rotation, Vector3 halfExtents)
+    {
+        Matrix4x4 previousMatrix = Gizmos.matrix;
+        Gizmos.matrix = Matrix4x4.TRS(center, rotation, Vector3.one);
+        Gizmos.DrawWireCube(Vector3.zero, halfExtents * 2f);
+        Gizmos.matrix = previousMatrix;
     }
 
     void OnTriggerStay(Collider other)

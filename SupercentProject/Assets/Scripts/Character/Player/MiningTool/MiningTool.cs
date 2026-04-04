@@ -11,6 +11,7 @@ public struct MiningToolStatus
     public int maxOre;
     public float pickingDelay;
     public float rnage;
+    public float width;
 }
 
 public abstract class MiningTool : BaseObject

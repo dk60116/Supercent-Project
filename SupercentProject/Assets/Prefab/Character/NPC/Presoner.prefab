@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2515174564887532724}
   - component: {fileID: 4392496021487901731}
-  - component: {fileID: 8209244227547709212}
   m_Layer: 0
   m_Name: Presoner
   m_TagString: Untagged
@@ -51,6 +50,7 @@ MonoBehaviour:
   status:
     moveSpeed: 2
     rotationSpeed: 0
+  body: {fileID: 820427332154459750}
   animator: {fileID: 4566936717307586999}
   navAgent: {fileID: 0}
   waitirngAvata: {fileID: 11662396550995164}
@@ -63,28 +63,6 @@ MonoBehaviour:
   isLeaving: 0
   isCompleted: 0
   bubble: {fileID: 0}
---- !u!195 &8209244227547709212
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7881625943301101895}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 0.2
-  m_Speed: 3.5
-  m_Acceleration: 8
-  avoidancePriority: 50
-  m_AngularSpeed: 120
-  m_StoppingDistance: 0
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 0
-  m_AutoRepath: 1
-  m_Height: 1
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 0
 --- !u!1001 &930001237329043853
 PrefabInstance:
   m_ObjectHideFlags: 0

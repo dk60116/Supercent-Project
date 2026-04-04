@@ -23,6 +23,8 @@ public abstract class Character : BaseObject
     protected CharacterStatus status;
 
     [SerializeField]
+    protected Transform body;
+    [SerializeField]
     protected Animator animator;
     [SerializeField, ReadOnly]
     protected NavMeshAgent navAgent;

@@ -7,6 +7,8 @@ using static WaitingLine;
 
 public class Presoner : Character
 {
+    private const float ArrivalDistance = 0.05f;
+
     [SerializeField]
     GameObject waitirngAvata, presonerAvatar;
 
@@ -34,12 +36,16 @@ public class Presoner : Character
     private RectTransform canvasRect;
     private Camera targetCamera;
     private PresonerSpawner ownerSpawner;
+    private Transform moveTarget;
+    private Vector3 destinationPosition;
+    private Quaternion destinationRotation;
+    private bool isMovingToDestination;
+    private float visualYawOffset;
 
     protected new void Awake()
     {
         base.Awake();
-
-        navAgent.speed = status.moveSpeed;
+        visualYawOffset = transform.eulerAngles.y;
 
         ChangeMode(false);
     }
@@ -58,12 +64,14 @@ public class Presoner : Character
 
     void Update()
     {
-        isArrival = isTarget && !isLeaving && navAgent.remainingDistance < 0.1f;
+        UpdateMovement();
+
+        isArrival = isTarget && !isLeaving && !isMovingToDestination;
         isArrival_Counter = isArrival && waitIndex == 0;
 
-        Animator.SetBool("bMove", navAgent.remainingDistance > 0.1f);
+        Animator.SetBool("bMove", isMovingToDestination);
 
-        if (isLeaving && !navAgent.pathPending && navAgent.remainingDistance < 0.1f)
+        if (isLeaving && !isMovingToDestination)
         {
             isLeaving = false;
         }
@@ -147,6 +155,11 @@ public class Presoner : Character
         }
     }
 
+    public void ChangeCloth()
+    {
+
+    }
+
     public bool NeedResource(ResourceType type)
     {
         switch (type)
@@ -194,11 +207,13 @@ public class Presoner : Character
             return;
         }
 
-        navAgent.SetDestination(targetPoint.position);
+        SetMoveTarget(targetPoint);
         waitIndex = index;
         isTarget = true;
         isLeaving = false;
         isCompleted = false;
+        isArrival = false;
+        isArrival_Counter = false;
     }
 
     public void MoveToEndPoint(Transform targetPoint)
@@ -208,7 +223,7 @@ public class Presoner : Character
             return;
         }
 
-        navAgent.SetDestination(targetPoint.position);
+        SetMoveTarget(targetPoint);
         waitIndex = -1;
         isTarget = false;
         isArrival = false;
@@ -259,11 +274,8 @@ public class Presoner : Character
         isLeaving = false;
         isCompleted = false;
         ownerSpawner = null;
-
-        if (navAgent != null && navAgent.enabled)
-        {
-            navAgent.ResetPath();
-        }
+        moveTarget = null;
+        isMovingToDestination = false;
     }
 
     private void EnsureBubble()
@@ -303,12 +315,70 @@ public class Presoner : Character
 
     private void MoveTo(Vector3 position, Quaternion rotation)
     {
-        transform.SetPositionAndRotation(position, rotation);
+        Quaternion uprightRotation = GetUprightRotation(rotation);
+        transform.SetPositionAndRotation(position, uprightRotation);
+        destinationPosition = position;
+        destinationRotation = uprightRotation;
+        isMovingToDestination = false;
+    }
 
-        if (navAgent != null && navAgent.enabled)
+    private void SetMoveTarget(Transform targetPoint)
+    {
+        moveTarget = targetPoint;
+        destinationPosition = targetPoint.position;
+        destinationRotation = GetUprightRotation(targetPoint.rotation);
+        isMovingToDestination = true;
+    }
+
+    private void UpdateMovement()
+    {
+        if (!isMovingToDestination)
         {
-            navAgent.Warp(position);
+            return;
         }
+
+        if (moveTarget != null)
+        {
+            destinationPosition = moveTarget.position;
+            destinationRotation = GetUprightRotation(moveTarget.rotation);
+        }
+
+        Vector3 currentPosition = transform.position;
+        Vector3 nextPosition = Vector3.MoveTowards(
+            currentPosition,
+            destinationPosition,
+            status.moveSpeed * Time.deltaTime);
+        transform.position = nextPosition;
+
+        RotateTowardsTarget(destinationRotation);
+
+        if (Vector3.Distance(nextPosition, destinationPosition) <= ArrivalDistance)
+        {
+            transform.position = destinationPosition;
+            transform.rotation = destinationRotation;
+            isMovingToDestination = false;
+            moveTarget = null;
+        }
+    }
+
+    private Quaternion GetUprightRotation(Quaternion rotation)
+    {
+        Vector3 eulerAngles = rotation.eulerAngles;
+        return Quaternion.Euler(0f, eulerAngles.y + visualYawOffset, 0f);
+    }
+
+    private void RotateTowardsTarget(Quaternion targetRotation)
+    {
+        if (status.rotationSpeed <= 0f)
+        {
+            transform.rotation = targetRotation;
+            return;
+        }
+
+        transform.rotation = Quaternion.RotateTowards(
+            transform.rotation,
+            targetRotation,
+            status.rotationSpeed * Time.deltaTime);
     }
 
     public bool IsArrivalCounter => isArrival_Counter;

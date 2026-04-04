@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class PObj_Desk : ProcessObject
 {
+    private const int PresonerCompletionOutputCount = 8;
+
     private enum DeskInputSlotState
     {
         Empty,
@@ -32,6 +34,7 @@ public class PObj_Desk : ProcessObject
     protected new void Update()
     {
         Presoner targetPresoner = GetCounterPresoner();
+        bool canOutputToPlayer = enterOutput && outputCount > 0;
         bool canOutputToPresoner = targetPresoner != null
             && targetPresoner.NeedResource(inputResourceType)
             && HasOccupiedInputSlot();
@@ -40,7 +43,7 @@ public class PObj_Desk : ProcessObject
             && GameManager.Instance.Player.Controller.GetResourceCount(inputResourceType) > 0
             && nextInputSlotIndex >= 0;
 
-        if (!(canAcceptInput || canOutputToPresoner))
+        if (!(canAcceptInput || canOutputToPresoner || canOutputToPlayer))
         {
             tickTIme = 0f;
             return;
@@ -59,6 +62,12 @@ public class PObj_Desk : ProcessObject
             {
                 GameManager.Instance.Player.Controller.SubResrouce(inputResourceType);
                 AddInputResource(nextInputSlotIndex);
+            }
+
+            if (canOutputToPlayer)
+            {
+                GameManager.Instance.Player.Controller.AddResource(outputResourceType);
+                base.SubOutputResource();
             }
 
             tickTIme = 0f;
@@ -132,7 +141,11 @@ public class PObj_Desk : ProcessObject
             {
                 if (targetPresoner != null)
                 {
-                    targetPresoner.ReceiveResource(inputResourceType);
+                    bool consumedResource = targetPresoner.ReceiveResource(inputResourceType);
+                    if (consumedResource && !targetPresoner.NeedResource(inputResourceType))
+                    {
+                        AddCompletionOutputResources();
+                    }
                 }
 
                 inputSlotStates[sourceIndex] = DeskInputSlotState.Empty;
@@ -199,5 +212,15 @@ public class PObj_Desk : ProcessObject
         }
 
         inputCount = occupiedCount;
+    }
+
+    private void AddCompletionOutputResources()
+    {
+        int addCount = Mathf.Min(PresonerCompletionOutputCount, outputResourcesStack.Count - outputCount);
+
+        for (int i = 0; i < addCount; ++i)
+        {
+            AddOutputResource();
+        }
     }
 }

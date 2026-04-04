@@ -61,6 +61,8 @@ public class Player : Character
 
         equipMiningTool.gameObject.SetActive(value);
 
+        body.localPosition = Vector3.zero;
+
         if (!controller.IsEnterMine)
         {
             animator.SetFloat("fEquip", 0f);
@@ -82,6 +84,7 @@ public class Player : Character
                 break;
             case MiningToolType.Vehicle:
                 type = 2;
+                body.localPosition = new Vector3(0.095f, 0.432f, -0.025f);
                 break;
         }
 
