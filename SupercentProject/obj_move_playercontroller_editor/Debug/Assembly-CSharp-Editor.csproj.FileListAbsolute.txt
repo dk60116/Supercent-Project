@@ -1,0 +1,2 @@
+C:\Git\SupercentProject\SupercentProject\obj_move_playercontroller_editor\Debug\Assembly-CSharp-Editor.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_move_playercontroller_editor\Debug\Assembly-CSharp-Editor.csproj.CoreCompileInputs.cache

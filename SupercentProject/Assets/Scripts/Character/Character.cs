@@ -32,6 +32,16 @@ public abstract class Character : BaseObject
     protected void Awake()
     {
         navAgent = GetComponent<NavMeshAgent>();
+
+        if (body == null && transform.childCount > 0)
+        {
+            body = transform.GetChild(0);
+        }
+
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>(true);
+        }
     }
 
     void Update()

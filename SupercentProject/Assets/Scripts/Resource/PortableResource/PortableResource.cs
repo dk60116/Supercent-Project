@@ -24,8 +24,8 @@ public abstract class PortableResource : MonoBehaviour
 
         var sequence = DOTween.Sequence();
 
-        sequence.Append(transform.DOScale(Vector3.one * 1.5f, 0.2f));
-        sequence.Append(transform.DOScale(Vector3.one, 0.1f));
+        sequence.Append(transform.DOScale(Vector3.one * 1.5f, 0.3f));
+        sequence.Append(transform.DOScale(Vector3.one, 0.2f));
     }
 
     public void PlayTransferAnimation(Vector3 start, Vector3 target, Vector3 targetRot, float duration, GameObject ableObject)
@@ -35,11 +35,49 @@ public abstract class PortableResource : MonoBehaviour
 
     public void PlayTransferAnimation(Vector3 start, Vector3 target, Vector3 targetRot, float duration, GameObject ableObject, Action onComplete)
     {
+        if (!gameObject.activeSelf)
+        {
+            gameObject.SetActive(true);
+        }
+
         transform.position = start;
         transform.eulerAngles = targetRot;
         transform.DOKill();
+        transform.localScale = Vector3.one;
         transform.DOMove(target, duration).
             OnComplete(() =>
+            {
+                ResetToOriginTransform();
+                transform.localScale = Vector3.one;
+                gameObject.SetActive(false);
+
+                if (ableObject != null)
+                {
+                    ableObject.SetActive(true);
+                }
+
+                onComplete?.Invoke();
+            });
+    }
+
+    public void PlayTransferAnimation_Jum(Vector3 start, Vector3 target, Vector3 targetRot, float duration, GameObject ableObject)
+    {
+        PlayTransferAnimation_Jum(start, target, targetRot, duration, ableObject, null);
+    }
+
+    public void PlayTransferAnimation_Jum(Vector3 start, Vector3 target, Vector3 targetRot, float duration, GameObject ableObject, Action onComplete, float jumpPower = 1f, int jumpCount = 1)
+    {
+        if (!gameObject.activeSelf)
+        {
+            gameObject.SetActive(true);
+        }
+
+        transform.position = start;
+        transform.eulerAngles = targetRot;
+        transform.DOKill();
+        transform.localScale = Vector3.one;
+        transform.DOJump(target, jumpPower, jumpCount, duration)
+            .OnComplete(() =>
             {
                 ResetToOriginTransform();
                 transform.localScale = Vector3.one;

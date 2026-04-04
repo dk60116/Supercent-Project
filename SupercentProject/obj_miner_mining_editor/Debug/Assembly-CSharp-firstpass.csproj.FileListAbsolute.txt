@@ -1,0 +1,6 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MinerMiningEditor\Assembly-CSharp-firstpass.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MinerMiningEditor\Assembly-CSharp-firstpass.pdb
+C:\Git\SupercentProject\SupercentProject\obj_miner_mining_editor\Debug\Assembly-CSharp-firstpass.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_miner_mining_editor\Debug\Assembly-CSharp-firstpass.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_miner_mining_editor\Debug\Assembly-CSharp-firstpass.dll
+C:\Git\SupercentProject\SupercentProject\obj_miner_mining_editor\Debug\Assembly-CSharp-firstpass.pdb

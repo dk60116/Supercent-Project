@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEngine.Rendering.DebugUI;
 
 
 public class Player : Character
@@ -21,7 +22,7 @@ public class Player : Character
         controller = GetComponentInChildren<PlayerController>();
 
         if (miningToolList.Count > 0)
-            ChangeMiningTool(MiningToolType.Vehicle);
+            ChangeMiningTool(1);
 
         TakeMiningTool(false);
     }
@@ -36,21 +37,26 @@ public class Player : Character
         
     }
 
-    public void ChangeMiningTool(MiningToolType type)
+    public void ChangeMiningTool(int type)
     {
-        switch (type)
+        if (Enum.IsDefined(typeof(MiningToolType), type))
         {
-            case MiningToolType.None:
-                break;
-            case MiningToolType.Pickaxe:
-                equipMiningTool = miningToolList[0];
-                break;
-            case MiningToolType.Screw:
-                equipMiningTool = miningToolList[1];
-                break;
-            case MiningToolType.Vehicle:
-                equipMiningTool = miningToolList[2];
-                break;
+            MiningToolType eState = (MiningToolType)type;
+
+            switch (eState)
+            {
+                case MiningToolType.None:
+                    break;
+                case MiningToolType.Pickaxe:
+                    equipMiningTool = miningToolList[0];
+                    break;
+                case MiningToolType.Screw:
+                    equipMiningTool = miningToolList[1];
+                    break;
+                case MiningToolType.Vehicle:
+                    equipMiningTool = miningToolList[2];
+                    break;
+            }
         }
     }
 
@@ -69,21 +75,21 @@ public class Player : Character
             return;
         }
 
-        int type = 0;
+        float type = 0f;
 
         switch (GetToolType())
         {
             case MiningToolType.None:
-                type = 0;
+                type = 0f;
                 break;
             case MiningToolType.Pickaxe:
-                type = 0;
+                type = 0f;
                 break;
             case MiningToolType.Screw:
-                type = 1;
+                type = 0.5f;
                 break;
             case MiningToolType.Vehicle:
-                type = 2;
+                type = 1f;
                 body.localPosition = new Vector3(0.095f, 0.432f, -0.025f);
                 break;
         }

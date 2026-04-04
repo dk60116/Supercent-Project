@@ -1,0 +1,8 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MinerPickSeq\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MinerPickSeq\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MinerPickSeq\Assembly-CSharp-firstpass.pdb
+C:\Git\SupercentProject\SupercentProject\obj_miner_pickseq\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_miner_pickseq\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_miner_pickseq\Debug\Assembly.44154EF1.Up2Date
+C:\Git\SupercentProject\SupercentProject\obj_miner_pickseq\Debug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\obj_miner_pickseq\Debug\Assembly-CSharp.pdb

@@ -109,6 +109,54 @@ public class PlayerController : MonoBehaviour
         maxIcon.gameObject.SetActive(false);
     }
 
+    public void AutoFillResourceStacks()
+    {
+        FillStackFromHolder(oreHolder, ref oreStack);
+        FillStackFromHolder(handcuffsHolder, ref handcuffsStack);
+        FillStackFromHolder(moneyHodler, ref moneyStack);
+
+        maxOre = oreStack != null ? oreStack.Count : 0;
+        maxHandcuff = handcuffsStack != null ? handcuffsStack.Count : 0;
+        maxMoney = moneyStack != null ? moneyStack.Count : 0;
+
+        oreCount = Mathf.Clamp(oreCount, 0, maxOre);
+        handcuffsCount = Mathf.Clamp(handcuffsCount, 0, maxHandcuff);
+        moneyCount = Mathf.Clamp(moneyCount, 0, maxMoney);
+    }
+
+    private void FillStackFromHolder(GameObject holder, ref List<PortableResource> stack)
+    {
+        if (stack == null)
+        {
+            stack = new List<PortableResource>();
+        }
+        else
+        {
+            stack.Clear();
+        }
+
+        if (holder == null)
+        {
+            return;
+        }
+
+        CollectPortableResources(holder.transform, stack);
+    }
+
+    private void CollectPortableResources(Transform parent, List<PortableResource> stack)
+    {
+        PortableResource portableResource = parent.GetComponent<PortableResource>();
+        if (portableResource != null)
+        {
+            stack.Add(portableResource);
+        }
+
+        for (int i = 0; i < parent.childCount; ++i)
+        {
+            CollectPortableResources(parent.GetChild(i), stack);
+        }
+    }
+
     private void Update()
     {
         if (player == null)
@@ -153,7 +201,7 @@ public class PlayerController : MonoBehaviour
                         case MiningToolType.None:
                             break;
                         case MiningToolType.Pickaxe:
-                            PickingEvent_Screw();
+                            player.Animator.SetTrigger("tPicking");
                             break;
                         case MiningToolType.Screw:
                             PickingEvent_Screw();
@@ -427,6 +475,7 @@ public class PlayerController : MonoBehaviour
     private void PickingEvent_Vehicle()
     {
         RaycastHit hit;
+        Vehicle vehicle = player.EquipMiningTool as Vehicle;
 
         tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
 
@@ -442,6 +491,11 @@ public class PlayerController : MonoBehaviour
         {
             if (hit.collider.CompareTag("Ore"))
             {
+                if (vehicle != null)
+                {
+                    vehicle.ActivateRotation();
+                }
+
                 hit.collider.GetComponent<Resource>().GetResource();
 
                 if (oreCount >= player.EquipMiningTool.Status.maxOre)

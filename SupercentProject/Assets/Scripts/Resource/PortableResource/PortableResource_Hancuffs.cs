@@ -4,13 +4,4 @@ using UnityEngine;
 
 public class PortableResource_Hancuffs : PortableResource
 {
-    void Start()
-    {
-        
-    }
-
-    void Update()
-    {
-        
-    }
 }

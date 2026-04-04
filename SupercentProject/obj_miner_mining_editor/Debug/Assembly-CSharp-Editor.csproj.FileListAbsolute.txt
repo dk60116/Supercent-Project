@@ -1,0 +1,9 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MinerMiningEditor\Assembly-CSharp-Editor.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MinerMiningEditor\Assembly-CSharp-Editor.pdb
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MinerMiningEditor\Assembly-CSharp-firstpass.pdb
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MinerMiningEditor\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\obj_miner_mining_editor\Debug\Assembly-CSharp-Editor.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_miner_mining_editor\Debug\Assembly-CSharp-Editor.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_miner_mining_editor\Debug\Assembly.1F1299F3.Up2Date
+C:\Git\SupercentProject\SupercentProject\obj_miner_mining_editor\Debug\Assembly-CSharp-Editor.dll
+C:\Git\SupercentProject\SupercentProject\obj_miner_mining_editor\Debug\Assembly-CSharp-Editor.pdb

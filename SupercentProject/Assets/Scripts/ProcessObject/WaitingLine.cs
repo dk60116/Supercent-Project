@@ -120,6 +120,8 @@ public class WaitingLine : MonoBehaviour
             return;
         }
 
+        targetPresoner.ChangeMode(true);
+
         int releasedIndex = targetPresoner.WaitIndex;
         if (releasedIndex < 0 || releasedIndex >= hasPersonList.Count)
         {

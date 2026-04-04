@@ -10,22 +10,19 @@ public abstract class Resource : BaseObject
     [SerializeField]
     protected GameObject renderObj;
 
+    protected float tickTime;
+
     private void Awake()
     {
         colliderTrigger = GetComponent<Collider>();
     }
-
-    void Start()
-    {
-        
-    }
-
-    void Update()
-    {
-        
-    }
-
     public virtual void GetResource()
     {
     }
+
+    public virtual void ConsumeResource()
+    {
+    }
+
+    public virtual bool IsAlive => true;
 }

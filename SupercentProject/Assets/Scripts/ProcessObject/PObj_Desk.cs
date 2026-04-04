@@ -38,10 +38,9 @@ public class PObj_Desk : ProcessObject
         bool canOutputToPresoner = targetPresoner != null
             && targetPresoner.NeedResource(inputResourceType)
             && HasOccupiedInputSlot();
-        int nextInputSlotIndex = GetNextStackInputSlotIndex();
         bool canAcceptInput = enterInput
             && GameManager.Instance.Player.Controller.GetResourceCount(inputResourceType) > 0
-            && nextInputSlotIndex >= 0;
+            && GetNextStackInputSlotIndex() >= 0;
 
         if (!(canAcceptInput || canOutputToPresoner || canOutputToPlayer))
         {
@@ -58,7 +57,12 @@ public class PObj_Desk : ProcessObject
                 SubOutputResource(targetPresoner);
             }
 
-            if (canAcceptInput)
+            int nextInputSlotIndex = GetNextStackInputSlotIndex();
+            bool canAcceptInputAfterOutput = enterInput
+                && GameManager.Instance.Player.Controller.GetResourceCount(inputResourceType) > 0
+                && nextInputSlotIndex >= 0;
+
+            if (canAcceptInputAfterOutput)
             {
                 GameManager.Instance.Player.Controller.SubResrouce(inputResourceType);
                 AddInputResource(nextInputSlotIndex);

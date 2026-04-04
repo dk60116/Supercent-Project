@@ -48,6 +48,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   objectName: Ore
   renderObj: {fileID: 2667196740815797517}
+  alive: 1
 --- !u!65 &8069723849305213132
 BoxCollider:
   m_ObjectHideFlags: 0

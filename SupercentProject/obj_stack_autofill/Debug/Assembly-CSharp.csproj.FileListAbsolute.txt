@@ -1,0 +1,8 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\StackAutoFill\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\StackAutoFill\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\Temp\bin\StackAutoFill\Assembly-CSharp-firstpass.pdb
+C:\Git\SupercentProject\SupercentProject\obj_stack_autofill\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_stack_autofill\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_stack_autofill\Debug\Assembly.44154EF1.Up2Date
+C:\Git\SupercentProject\SupercentProject\obj_stack_autofill\Debug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\obj_stack_autofill\Debug\Assembly-CSharp.pdb

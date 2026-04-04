@@ -1,0 +1,6 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MovePlayerControllerEditor2\Assembly-CSharp-firstpass.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\MovePlayerControllerEditor2\Assembly-CSharp-firstpass.pdb
+C:\Git\SupercentProject\SupercentProject\obj_move_playercontroller_editor2\Debug\Assembly-CSharp-firstpass.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_move_playercontroller_editor2\Debug\Assembly-CSharp-firstpass.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_move_playercontroller_editor2\Debug\Assembly-CSharp-firstpass.dll
+C:\Git\SupercentProject\SupercentProject\obj_move_playercontroller_editor2\Debug\Assembly-CSharp-firstpass.pdb

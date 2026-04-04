@@ -7,6 +7,9 @@ using static WaitingLine;
 
 public class Presoner : Character
 {
+    [SerializeField]
+    SkinnedMeshRenderer clothMesh;
+
     private const float ArrivalDistance = 0.05f;
 
     [SerializeField]
@@ -94,7 +97,7 @@ public class Presoner : Character
             return;
         }
 
-        if (needHanCuffsCount <= 0)
+        if (!ShouldShowBubble())
         {
             if (bubble.gameObject.activeSelf)
             {
@@ -137,7 +140,18 @@ public class Presoner : Character
 
     public void ChangeMode(bool presoner)
     {
-        waitirngAvata.SetActive(!presoner);
+        if (!presoner)
+        {
+            body = waitirngAvata.transform;
+            animator = waitirngAvata.GetComponent<Animator>();
+        }
+        else
+        {
+            body = presonerAvatar.transform;
+            animator = presonerAvatar.GetComponent<Animator>();
+        }
+
+            waitirngAvata.SetActive(!presoner);
         presonerAvatar.SetActive(presoner);
     }
 
@@ -153,11 +167,6 @@ public class Presoner : Character
             AssignWaitPoint(targetInfo.transform, targetInfo.index);
             GameManager.Instance.WaitingLine.SetHasPerson(targetInfo.index, true);
         }
-    }
-
-    public void ChangeCloth()
-    {
-
     }
 
     public bool NeedResource(ResourceType type)
@@ -240,7 +249,12 @@ public class Presoner : Character
         }
 
         bubble.SetData(null, needHanCuffsCount);
-        bubble.gameObject.SetActive(needHanCuffsCount > 0);
+        bubble.gameObject.SetActive(ShouldShowBubble());
+    }
+
+    private bool ShouldShowBubble()
+    {
+        return needHanCuffsCount > 0 && isArrival_Counter && !isLeaving && !isCompleted;
     }
 
     public void PrepareForSpawn(PresonerSpawner spawner, Transform spawnPoint)
@@ -253,6 +267,7 @@ public class Presoner : Character
         isLeaving = false;
         isCompleted = false;
         needHanCuffsCount = Random.Range(1, 6);
+        clothMesh.material.color = Random.ColorHSV();
 
         ChangeMode(false);
 
