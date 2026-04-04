@@ -61,4 +61,17 @@ public class WaitingLine : MonoBehaviour
     {
         hasPersonList[index] = value;
     }
+
+    public Presoner GetCounterPresoner()
+    {
+        for (int i = 0; i < presoners.Count; ++i)
+        {
+            if (presoners[i] != null && presoners[i].IsArrivalCounter)
+            {
+                return presoners[i];
+            }
+        }
+
+        return null;
+    }
 }

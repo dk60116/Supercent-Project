@@ -1,0 +1,8 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\DeskInput\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\DeskInput\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\Temp\bin\DeskInput\Assembly-CSharp-firstpass.pdb
+C:\Git\SupercentProject\SupercentProject\obj_desk_input\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_desk_input\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_desk_input\Debug\Assembly.44154EF1.Up2Date
+C:\Git\SupercentProject\SupercentProject\obj_desk_input\Debug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\obj_desk_input\Debug\Assembly-CSharp.pdb

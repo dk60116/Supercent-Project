@@ -11,13 +11,56 @@ public class NeedBubble : MonoBehaviour
     [SerializeField]
     public TextMeshProUGUI countTxt;
 
-    void Start()
+    private UIManager owner;
+
+    public bool IsPooled { get; private set; }
+
+    public void BindPool(UIManager poolOwner)
     {
-        
+        owner = poolOwner;
     }
 
-    void Update()
+    public void SetData(string count)
     {
-        
+        if (countTxt != null)
+        {
+            countTxt.text = count;
+        }
+    }
+
+    public void SetData(Sprite bubbleIcon, int count)
+    {
+        SetData(count.ToString());
+    }
+
+    public void ResetBubble()
+    {
+        if (icon != null)
+        {
+            icon.sprite = null;
+            icon.enabled = false;
+        }
+
+        if (countTxt != null)
+        {
+            countTxt.text = string.Empty;
+        }
+    }
+
+    public void Release()
+    {
+        if (owner != null)
+        {
+            owner.ReleaseBubble(this);
+        }
+        else
+        {
+            gameObject.SetActive(false);
+        }
+    }
+
+    public void SetPooled(bool pooled)
+    {
+        IsPooled = pooled;
     }
 }

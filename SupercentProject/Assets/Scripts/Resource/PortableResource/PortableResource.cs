@@ -38,7 +38,11 @@ public abstract class PortableResource : MonoBehaviour
                 ResetToOriginTransform();
                 transform.localScale = Vector3.one;
                 gameObject.SetActive(false);
-                ableObject.SetActive(true);
+
+                if (ableObject != null)
+                {
+                    ableObject.SetActive(true);
+                }
             });
     }
 
