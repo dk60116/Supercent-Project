@@ -35,12 +35,6 @@ public class NeedBubble : MonoBehaviour
 
     public void ResetBubble()
     {
-        if (icon != null)
-        {
-            icon.sprite = null;
-            icon.enabled = false;
-        }
-
         if (countTxt != null)
         {
             countTxt.text = string.Empty;

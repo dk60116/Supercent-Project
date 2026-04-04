@@ -144,10 +144,20 @@ public class PlayerController : MonoBehaviour
                 {
                     tickTime = 0f;
 
-                    if (player.GetToolType() == MiningToolType.Pickaxe)
-                        player.Animator.SetTrigger("tPicking");
-                    else if (player.GetToolType() == MiningToolType.Screw)
-                        PickingEvent_Screw();
+                    switch (player.GetToolType())
+                    {
+                        case MiningToolType.None:
+                            break;
+                        case MiningToolType.Pickaxe:
+                            PickingEvent_Screw();
+                            break;
+                        case MiningToolType.Screw:
+                            PickingEvent_Screw();
+                            break;
+                        case MiningToolType.Vehicle:
+                            PickingEvent_Vehicle();
+                            break;
+                    }
                 }
 
                 tickTime += Time.deltaTime;
@@ -254,6 +264,30 @@ public class PlayerController : MonoBehaviour
     }
 
     private void PickingEvent_Screw()
+    {
+        RaycastHit hit;
+        Screw screw = player.EquipMiningTool as Screw;
+
+        tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
+
+        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, player.EquipMiningTool.Status.rnage))
+        {
+            if (hit.collider.CompareTag("Ore"))
+            {
+                if (screw != null)
+                {
+                    screw.ActivateRotation();
+                }
+
+                hit.collider.GetComponent<Resource>().GetResource();
+
+                if (oreCount >= player.EquipMiningTool.Status.maxOre)
+                    TryStartAbleMaxIconCoroutine();
+            }
+        }
+    }
+
+    private void PickingEvent_Vehicle()
     {
         RaycastHit hit;
         Screw screw = player.EquipMiningTool as Screw;

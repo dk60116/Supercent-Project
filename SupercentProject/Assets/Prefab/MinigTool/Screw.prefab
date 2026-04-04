@@ -49,7 +49,7 @@ MonoBehaviour:
   status:
     maxOre: 20
     pickingDelay: 0.25
-    rnage: 1.2
+    rnage: 1.25
   type: 0
   drill: {fileID: 8520548108957847999}
   rotateSpeed: 1080

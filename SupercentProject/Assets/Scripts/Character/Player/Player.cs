@@ -21,7 +21,7 @@ public class Player : Character
         controller = GetComponentInChildren<PlayerController>();
 
         if (miningToolList.Count > 0)
-            ChangeMiningTool(MiningToolType.Screw);
+            ChangeMiningTool(MiningToolType.Vehicle);
 
         TakeMiningTool(false);
     }
@@ -48,7 +48,7 @@ public class Player : Character
             case MiningToolType.Screw:
                 equipMiningTool = miningToolList[1];
                 break;
-            case MiningToolType.Excavator:
+            case MiningToolType.Vehicle:
                 equipMiningTool = miningToolList[2];
                 break;
         }
@@ -80,7 +80,7 @@ public class Player : Character
             case MiningToolType.Screw:
                 type = 1;
                 break;
-            case MiningToolType.Excavator:
+            case MiningToolType.Vehicle:
                 type = 2;
                 break;
         }

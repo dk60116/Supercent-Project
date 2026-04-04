@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum MiningToolType { None, Pickaxe, Screw, Excavator }; 
+public enum MiningToolType { None, Pickaxe, Screw, Vehicle }; 
 
 [Serializable]
 public struct MiningToolStatus

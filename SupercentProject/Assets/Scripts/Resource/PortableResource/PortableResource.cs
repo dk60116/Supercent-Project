@@ -1,6 +1,7 @@
 using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 public abstract class PortableResource : MonoBehaviour
@@ -29,6 +30,11 @@ public abstract class PortableResource : MonoBehaviour
 
     public void PlayTransferAnimation(Vector3 start, Vector3 target, Vector3 targetRot, float duration, GameObject ableObject)
     {
+        PlayTransferAnimation(start, target, targetRot, duration, ableObject, null);
+    }
+
+    public void PlayTransferAnimation(Vector3 start, Vector3 target, Vector3 targetRot, float duration, GameObject ableObject, Action onComplete)
+    {
         transform.position = start;
         transform.eulerAngles = targetRot;
         transform.DOKill();
@@ -43,6 +49,8 @@ public abstract class PortableResource : MonoBehaviour
                 {
                     ableObject.SetActive(true);
                 }
+
+                onComplete?.Invoke();
             });
     }
 

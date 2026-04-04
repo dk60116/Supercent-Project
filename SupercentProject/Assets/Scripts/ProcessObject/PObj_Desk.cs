@@ -4,6 +4,14 @@ using UnityEngine;
 
 public class PObj_Desk : ProcessObject
 {
+    private enum DeskInputSlotState
+    {
+        Empty,
+        Incoming,
+        Occupied,
+        Outgoing,
+    }
+
     [SerializeField]
     private float prisonerOutputInterval = 0.1f;
     [SerializeField]
@@ -11,12 +19,28 @@ public class PObj_Desk : ProcessObject
     [SerializeField]
     private Vector3 prisonerTargetOffset = new Vector3(0f, 1f, 0f);
 
+    private DeskInputSlotState[] inputSlotStates;
+
+    protected new void Awake()
+    {
+        base.Awake();
+
+        inputSlotStates = new DeskInputSlotState[inputResourcesStack.Count];
+        inputCount = 0;
+    }
+
     protected new void Update()
     {
         Presoner targetPresoner = GetCounterPresoner();
-        bool canOutputToPresoner = targetPresoner != null && inputCount > 0;
+        bool canOutputToPresoner = targetPresoner != null
+            && targetPresoner.NeedResource(inputResourceType)
+            && HasOccupiedInputSlot();
+        int nextInputSlotIndex = GetNextStackInputSlotIndex();
+        bool canAcceptInput = enterInput
+            && GameManager.Instance.Player.Controller.GetResourceCount(inputResourceType) > 0
+            && nextInputSlotIndex >= 0;
 
-        if (!(enterInput || canOutputToPresoner))
+        if (!(canAcceptInput || canOutputToPresoner))
         {
             tickTIme = 0f;
             return;
@@ -31,10 +55,10 @@ public class PObj_Desk : ProcessObject
                 SubOutputResource(targetPresoner);
             }
 
-            if (enterInput && GameManager.Instance.Player.Controller.GetResourceCount(inputResourceType) > 0)
+            if (canAcceptInput)
             {
                 GameManager.Instance.Player.Controller.SubResrouce(inputResourceType);
-                AddInputResource();
+                AddInputResource(nextInputSlotIndex);
             }
 
             tickTIme = 0f;
@@ -48,18 +72,54 @@ public class PObj_Desk : ProcessObject
         SubOutputResource(GetCounterPresoner());
     }
 
-    private void SubOutputResource(Presoner targetPresoner)
+    protected override void AddInputResource()
     {
-        if (targetPresoner == null || inputCount <= 0)
+        AddInputResource(GetNextStackInputSlotIndex());
+    }
+
+    private void AddInputResource(int targetIndex)
+    {
+        if (targetIndex < 0)
         {
             return;
         }
 
-        PortableResource sourceResource = inputResourcesStack[inputCount - 1];
+        PortableResource sourceResource = GameManager.Instance.Player.Controller.GetPoppedResource(inputResourceType);
+        PortableResource targetResource = inputResourcesStack[targetIndex];
+
+        inputSlotStates[targetIndex] = DeskInputSlotState.Incoming;
+
+        sourceResource.PlayTransferAnimation
+        (
+            sourceResource.transform.position,
+            targetResource.transform.position,
+            targetResource.transform.eulerAngles,
+            0.25f,
+            targetResource.gameObject,
+            () =>
+            {
+                inputSlotStates[targetIndex] = DeskInputSlotState.Occupied;
+                RefreshOccupiedInputCount();
+            }
+        );
+    }
+
+    private void SubOutputResource(Presoner targetPresoner)
+    {
+        int sourceIndex = GetTopOccupiedInputSlotIndex();
+        if (targetPresoner == null || sourceIndex < 0)
+        {
+            return;
+        }
+
+        PortableResource sourceResource = inputResourcesStack[sourceIndex];
         if (sourceResource == null)
         {
             return;
         }
+
+        inputSlotStates[sourceIndex] = DeskInputSlotState.Outgoing;
+        RefreshOccupiedInputCount();
 
         sourceResource.PlayTransferAnimation
         (
@@ -67,14 +127,77 @@ public class PObj_Desk : ProcessObject
             targetPresoner.transform.position + prisonerTargetOffset,
             targetPresoner.transform.eulerAngles,
             prisonerTransferDuration,
-            null
-        );
+            null,
+            () =>
+            {
+                if (targetPresoner != null)
+                {
+                    targetPresoner.ReceiveResource(inputResourceType);
+                }
 
-        --inputCount;
+                inputSlotStates[sourceIndex] = DeskInputSlotState.Empty;
+            }
+        );
     }
 
     private Presoner GetCounterPresoner()
     {
         return GameManager.Instance.WaitingLine.GetCounterPresoner();
+    }
+
+    private bool HasOccupiedInputSlot()
+    {
+        return GetTopOccupiedInputSlotIndex() >= 0;
+    }
+
+    private int GetNextStackInputSlotIndex()
+    {
+        for (int i = 0; i < inputSlotStates.Length; ++i)
+        {
+            DeskInputSlotState slotState = inputSlotStates[i];
+
+            if (slotState == DeskInputSlotState.Occupied || slotState == DeskInputSlotState.Incoming)
+            {
+                continue;
+            }
+
+            if (slotState == DeskInputSlotState.Empty)
+            {
+                return i;
+            }
+
+            // Do not stack a new item above a slot that is still leaving.
+            return -1;
+        }
+
+        return -1;
+    }
+
+    private int GetTopOccupiedInputSlotIndex()
+    {
+        for (int i = inputSlotStates.Length - 1; i >= 0; --i)
+        {
+            if (inputSlotStates[i] == DeskInputSlotState.Occupied)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private void RefreshOccupiedInputCount()
+    {
+        int occupiedCount = 0;
+
+        for (int i = 0; i < inputSlotStates.Length; ++i)
+        {
+            if (inputSlotStates[i] == DeskInputSlotState.Occupied)
+            {
+                ++occupiedCount;
+            }
+        }
+
+        inputCount = occupiedCount;
     }
 }

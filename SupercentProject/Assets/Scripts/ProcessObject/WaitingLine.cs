@@ -15,6 +15,8 @@ public class WaitingLine : MonoBehaviour
     private Transform startPoint;
     [SerializeField]
     private List<Transform> waitPoints;
+    [SerializeField]
+    private Transform endPoint;
     [SerializeField, ReadOnly]
     private List<bool> hasPersonList;
 
@@ -30,7 +32,13 @@ public class WaitingLine : MonoBehaviour
     {
         for (int i = 0; i < presoners.Count; ++i)
         {
-            presoners[i].StartWaiting();
+            Presoner presoner = presoners[i];
+            if (presoner == null)
+            {
+                continue;
+            }
+
+            presoner.StartWaiting();
         }
     }
 
@@ -62,6 +70,81 @@ public class WaitingLine : MonoBehaviour
         hasPersonList[index] = value;
     }
 
+    public void RegisterPresoner(Presoner presoner)
+    {
+        if (presoner == null || presoners.Contains(presoner))
+        {
+            return;
+        }
+
+        presoners.Add(presoner);
+    }
+
+    public void UnregisterPresoner(Presoner presoner)
+    {
+        if (presoner == null)
+        {
+            return;
+        }
+
+        presoners.Remove(presoner);
+    }
+
+    public bool TryAssignWaitPoint(Presoner presoner)
+    {
+        if (presoner == null)
+        {
+            return false;
+        }
+
+        FindWaitTargetInfo targetInfo = FindEmptyPoint();
+        if (!targetInfo.find)
+        {
+            return false;
+        }
+
+        presoner.AssignWaitPoint(targetInfo.transform, targetInfo.index);
+        SetHasPerson(targetInfo.index, true);
+        return true;
+    }
+
+    public bool HasAvailableWaitPoint()
+    {
+        return FindEmptyPoint().find;
+    }
+
+    public void ReleasePresoner(Presoner targetPresoner)
+    {
+        if (targetPresoner == null)
+        {
+            return;
+        }
+
+        int releasedIndex = targetPresoner.WaitIndex;
+        if (releasedIndex < 0 || releasedIndex >= hasPersonList.Count)
+        {
+            targetPresoner.MoveToEndPoint(endPoint);
+            return;
+        }
+
+        hasPersonList[releasedIndex] = false;
+
+        for (int index = releasedIndex + 1; index < waitPoints.Count; ++index)
+        {
+            Presoner nextPresoner = GetPresonerByWaitIndex(index);
+            if (nextPresoner == null || nextPresoner.IsLeaving || nextPresoner.IsCompleted)
+            {
+                continue;
+            }
+
+            nextPresoner.AssignWaitPoint(waitPoints[index - 1], index - 1);
+            hasPersonList[index - 1] = true;
+            hasPersonList[index] = false;
+        }
+
+        targetPresoner.MoveToEndPoint(endPoint);
+    }
+
     public Presoner GetCounterPresoner()
     {
         for (int i = 0; i < presoners.Count; ++i)
@@ -69,6 +152,23 @@ public class WaitingLine : MonoBehaviour
             if (presoners[i] != null && presoners[i].IsArrivalCounter)
             {
                 return presoners[i];
+            }
+        }
+
+        return null;
+    }
+
+    public Transform StartPoint => startPoint;
+    public int WaitingPointCount => waitPoints.Count;
+
+    private Presoner GetPresonerByWaitIndex(int waitIndex)
+    {
+        for (int i = 0; i < presoners.Count; ++i)
+        {
+            Presoner presoner = presoners[i];
+            if (presoner != null && presoner.WaitIndex == waitIndex)
+            {
+                return presoner;
             }
         }
 
