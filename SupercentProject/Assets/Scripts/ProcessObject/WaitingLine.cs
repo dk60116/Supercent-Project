@@ -16,7 +16,7 @@ public class WaitingLine : MonoBehaviour
     [SerializeField]
     private List<Transform> waitPoints;
     [SerializeField]
-    private Transform endPoint;
+    private Transform endPoint, endPoint2;
     [SerializeField, ReadOnly]
     private List<bool> hasPersonList;
 
@@ -125,7 +125,7 @@ public class WaitingLine : MonoBehaviour
         int releasedIndex = targetPresoner.WaitIndex;
         if (releasedIndex < 0 || releasedIndex >= hasPersonList.Count)
         {
-            targetPresoner.MoveToEndPoint(endPoint);
+            targetPresoner.MoveToEndPoint(endPoint, endPoint2);
             return;
         }
 
@@ -144,7 +144,7 @@ public class WaitingLine : MonoBehaviour
             hasPersonList[index] = false;
         }
 
-        targetPresoner.MoveToEndPoint(endPoint);
+        targetPresoner.MoveToEndPoint(endPoint, endPoint2);
     }
 
     public Presoner GetCounterPresoner()

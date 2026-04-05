@@ -1,0 +1,2 @@
+C:\Git\SupercentProject\SupercentProject\obj_add_queue\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_add_queue\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache

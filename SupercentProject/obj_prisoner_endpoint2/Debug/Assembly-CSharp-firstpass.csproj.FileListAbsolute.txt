@@ -1,0 +1,6 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\PrisonerEndpoint2\Assembly-CSharp-firstpass.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\PrisonerEndpoint2\Assembly-CSharp-firstpass.pdb
+C:\Git\SupercentProject\SupercentProject\obj_prisoner_endpoint2\Debug\Assembly-CSharp-firstpass.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_prisoner_endpoint2\Debug\Assembly-CSharp-firstpass.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_prisoner_endpoint2\Debug\Assembly-CSharp-firstpass.dll
+C:\Git\SupercentProject\SupercentProject\obj_prisoner_endpoint2\Debug\Assembly-CSharp-firstpass.pdb

@@ -20,6 +20,8 @@ public class PObj_Desk : ProcessObject
     private float prisonerTransferDuration = 0.1f;
     [SerializeField]
     private Vector3 prisonerTargetOffset = new Vector3(0f, 1f, 0f);
+    [SerializeField, ReadOnly]
+    private int pendingPrisonerOutputRequestCount;
 
     private DeskInputSlotState[] inputSlotStates;
 
@@ -33,14 +35,19 @@ public class PObj_Desk : ProcessObject
 
     protected new void Update()
     {
+        PlayerController playerController = GameManager.Instance != null && GameManager.Instance.Player != null
+            ? GameManager.Instance.Player.Controller
+            : null;
         Presoner targetPresoner = GetCounterPresoner();
-        bool canOutputToPlayer = enterOutput && outputCount > 0;
-        bool canOutputToPresoner = targetPresoner != null
-            && targetPresoner.NeedResource(inputResourceType)
-            && HasOccupiedInputSlot();
+        bool canOutputToPlayer = enterOutput
+            && outputCount > 0
+            && playerController != null
+            && playerController.CanAddResource(outputResourceType);
+        bool canOutputToPresoner = CanQueuePrisonerOutput(targetPresoner);
         bool canAcceptInput = enterInput
-            && GameManager.Instance.Player.Controller.GetResourceCount(inputResourceType) > 0
-            && GetNextStackInputSlotIndex() >= 0;
+            && playerController != null
+            && playerController.GetResourceCount(inputResourceType) > 0
+            && CanAddInputResource();
 
         if (!(canAcceptInput || canOutputToPresoner || canOutputToPlayer))
         {
@@ -54,23 +61,21 @@ public class PObj_Desk : ProcessObject
             // input slot and immediately steal that same index before it is visible.
             if (canOutputToPresoner)
             {
-                SubOutputResource(targetPresoner);
+                RequestSubOutputResource(targetPresoner);
             }
 
-            int nextInputSlotIndex = GetNextStackInputSlotIndex();
             bool canAcceptInputAfterOutput = enterInput
-                && GameManager.Instance.Player.Controller.GetResourceCount(inputResourceType) > 0
-                && nextInputSlotIndex >= 0;
+                && playerController != null
+                && playerController.GetResourceCount(inputResourceType) > 0
+                && CanAddInputResource();
 
             if (canAcceptInputAfterOutput)
             {
-                GameManager.Instance.Player.Controller.SubResrouce(inputResourceType);
-                AddInputResource(nextInputSlotIndex);
+                AddInputResource();
             }
 
             if (canOutputToPlayer)
             {
-                GameManager.Instance.Player.Controller.AddResource(outputResourceType);
                 base.SubOutputResource();
             }
 
@@ -82,53 +87,111 @@ public class PObj_Desk : ProcessObject
 
     public override void SubOutputResource()
     {
-        SubOutputResource(GetCounterPresoner());
+        RequestSubOutputResource(GetCounterPresoner());
     }
 
-    protected override void AddInputResource()
+    protected override bool CanAddInputResource()
     {
-        AddInputResource(GetNextStackInputSlotIndex());
+        return GetAvailableDeskInputCapacity() > 0;
     }
 
-    private void AddInputResource(int targetIndex)
+    protected override bool TryExecuteQueuedAddInputResource(PendingInputRequest pendingRequest)
     {
+        int targetIndex = GetNextStackInputSlotIndex();
         if (targetIndex < 0)
         {
-            return;
+            return false;
         }
 
-        PortableResource sourceResource = GameManager.Instance.Player.Controller.GetPoppedResource(inputResourceType);
         PortableResource targetResource = inputResourcesStack[targetIndex];
+        if (targetResource == null || pendingRequest.SourceResource == null)
+        {
+            return true;
+        }
 
         inputSlotStates[targetIndex] = DeskInputSlotState.Incoming;
 
-        sourceResource.PlayTransferAnimation
-        (
-            sourceResource.transform.position,
-            targetResource.transform.position,
-            targetResource.transform.eulerAngles,
-            0.25f,
-            targetResource.gameObject,
-            () =>
-            {
-                inputSlotStates[targetIndex] = DeskInputSlotState.Occupied;
-                RefreshOccupiedInputCount();
-            }
-        );
+        if (pendingRequest.UseJumpAnimation)
+        {
+            pendingRequest.SourceResource.PlayTransferAnimation_Jum
+            (
+                pendingRequest.SourceResource.transform.position,
+                targetResource.transform.position,
+                targetResource.transform.eulerAngles,
+                pendingRequest.Duration,
+                targetResource.gameObject,
+                () =>
+                {
+                    inputSlotStates[targetIndex] = DeskInputSlotState.Occupied;
+                    RefreshOccupiedInputCount();
+                },
+                pendingRequest.JumpPower,
+                pendingRequest.JumpCount
+            );
+        }
+        else
+        {
+            pendingRequest.SourceResource.PlayTransferAnimation
+            (
+                pendingRequest.SourceResource.transform.position,
+                targetResource.transform.position,
+                targetResource.transform.eulerAngles,
+                pendingRequest.Duration,
+                targetResource.gameObject,
+                () =>
+                {
+                    inputSlotStates[targetIndex] = DeskInputSlotState.Occupied;
+                    RefreshOccupiedInputCount();
+                }
+            );
+        }
+
+        return true;
     }
 
-    private void SubOutputResource(Presoner targetPresoner)
+    private bool RequestSubOutputResource(Presoner targetPresoner)
+    {
+        if (!CanQueuePrisonerOutput(targetPresoner))
+        {
+            return false;
+        }
+
+        bool enqueued = EnqueueCustomResourceOperation(() =>
+        {
+            bool completed = TryExecuteQueuedPrisonerOutput(targetPresoner);
+            if (completed)
+            {
+                pendingPrisonerOutputRequestCount = Mathf.Max(0, pendingPrisonerOutputRequestCount - 1);
+            }
+
+            return completed;
+        });
+
+        if (enqueued)
+        {
+            ++pendingPrisonerOutputRequestCount;
+        }
+
+        return enqueued;
+    }
+
+    private bool TryExecuteQueuedPrisonerOutput(Presoner targetPresoner)
     {
         int sourceIndex = GetTopOccupiedInputSlotIndex();
-        if (targetPresoner == null || sourceIndex < 0)
+        if (sourceIndex < 0)
         {
-            return;
+            return true;
+        }
+
+        if (targetPresoner == null || !targetPresoner.NeedResource(inputResourceType))
+        {
+            return true;
         }
 
         PortableResource sourceResource = inputResourcesStack[sourceIndex];
         if (sourceResource == null)
         {
-            return;
+            return true;
         }
 
         inputSlotStates[sourceIndex] = DeskInputSlotState.Outgoing;
@@ -155,6 +218,8 @@ public class PObj_Desk : ProcessObject
                 inputSlotStates[sourceIndex] = DeskInputSlotState.Empty;
             }
         );
+
+        return true;
     }
 
     private Presoner GetCounterPresoner()
@@ -165,6 +230,13 @@ public class PObj_Desk : ProcessObject
     private bool HasOccupiedInputSlot()
     {
         return GetTopOccupiedInputSlotIndex() >= 0;
+    }
+
+    private bool CanQueuePrisonerOutput(Presoner targetPresoner)
+    {
+        return targetPresoner != null
+            && targetPresoner.NeedResource(inputResourceType)
+            && GetAvailableDeskOccupiedInputCount() > 0;
     }
 
     private int GetNextStackInputSlotIndex()
@@ -216,6 +288,36 @@ public class PObj_Desk : ProcessObject
         }
 
         inputCount = occupiedCount;
+    }
+
+    private int GetAvailableDeskInputCapacity()
+    {
+        int emptySlotCount = 0;
+
+        for (int i = 0; i < inputSlotStates.Length; ++i)
+        {
+            if (inputSlotStates[i] == DeskInputSlotState.Empty)
+            {
+                ++emptySlotCount;
+            }
+        }
+
+        return Mathf.Max(0, emptySlotCount - PendingAddInputRequestCount);
+    }
+
+    private int GetAvailableDeskOccupiedInputCount()
+    {
+        int occupiedSlotCount = 0;
+
+        for (int i = 0; i < inputSlotStates.Length; ++i)
+        {
+            if (inputSlotStates[i] == DeskInputSlotState.Occupied)
+            {
+                ++occupiedSlotCount;
+            }
+        }
+
+        return Mathf.Max(0, occupiedSlotCount - pendingPrisonerOutputRequestCount);
     }
 
     private void AddCompletionOutputResources()

@@ -34,7 +34,6 @@ public class Player : Character
 
     void Update()
     {
-        
     }
 
     public void ChangeMiningTool(int type)
@@ -86,10 +85,10 @@ public class Player : Character
                 type = 0f;
                 break;
             case MiningToolType.Screw:
-                type = 0.5f;
+                type = 0.333f;
                 break;
             case MiningToolType.Vehicle:
-                type = 1f;
+                type = 0.666f;
                 body.localPosition = new Vector3(0.095f, 0.432f, -0.025f);
                 break;
         }

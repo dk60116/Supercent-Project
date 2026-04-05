@@ -168,6 +168,8 @@ public class PlayerController : MonoBehaviour
 
         if (enterMine)
             TickMining();
+        else
+            player.Animator.SetFloat("fEquip", handcuffsCount > 0 ? 1f : 0f);
     }
 
     public void EnterMine(bool enter)
@@ -747,6 +749,21 @@ public class PlayerController : MonoBehaviour
         }
 
         return null;
+    }
+
+    public bool CanAddResource(ResourceType type)
+    {
+        switch (type)
+        {
+            case ResourceType.Ore:
+                return oreStack != null && oreCount < oreStack.Count;
+            case ResourceType.Handcuffs:
+                return handcuffsStack != null && handcuffsCount < handcuffsStack.Count;
+            case ResourceType.Money:
+                return moneyStack != null && moneyCount < moneyStack.Count;
+        }
+
+        return false;
     }
 
     public int HandcuffsCount => handcuffsCount;

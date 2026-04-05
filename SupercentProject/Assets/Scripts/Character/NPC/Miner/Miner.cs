@@ -207,29 +207,10 @@ public class Miner : Character
         while (targetOre != null && targetOre.IsAlive)
         {
             Vector3 destination = targetOre.transform.position + targetVisitOffset;
-            Vector3 toDestination = destination - transform.position;
-            toDestination.y = 0f;
-
-            if (toDestination.sqrMagnitude <= ArrivalDistance * ArrivalDistance)
+            if (MoveTowardsPosition(destination, ArrivalDistance))
             {
-                transform.position = destination;
                 SetMoveAnimation(false);
                 break;
-            }
-
-            Vector3 moveDirection = toDestination.normalized;
-            transform.position = Vector3.MoveTowards(
-                transform.position,
-                destination,
-                status.moveSpeed * Time.deltaTime);
-
-            if (moveDirection.sqrMagnitude > 0f)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-                transform.rotation = Quaternion.RotateTowards(
-                    transform.rotation,
-                    targetRotation,
-                    status.rotationSpeed * Time.deltaTime);
             }
 
             yield return null;
@@ -245,26 +226,10 @@ public class Miner : Character
         while (targetOre != null && targetOre.IsAlive)
         {
             Vector3 lookDirection = targetOre.transform.position - transform.position;
-            lookDirection.y = 0f;
-
-            if (lookDirection.sqrMagnitude <= 0.0001f)
+            if (RotateTowardsDirection(lookDirection, 0f, FacingAngleThreshold))
             {
                 yield break;
             }
-
-            Quaternion targetRotation = Quaternion.LookRotation(lookDirection.normalized);
-            float angle = Quaternion.Angle(transform.rotation, targetRotation);
-
-            if (angle <= FacingAngleThreshold)
-            {
-                transform.rotation = targetRotation;
-                yield break;
-            }
-
-            transform.rotation = Quaternion.RotateTowards(
-                transform.rotation,
-                targetRotation,
-                status.rotationSpeed * Time.deltaTime);
 
             yield return null;
         }

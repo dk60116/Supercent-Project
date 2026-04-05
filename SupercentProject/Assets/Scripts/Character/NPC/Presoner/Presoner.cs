@@ -7,6 +7,14 @@ using static WaitingLine;
 
 public class Presoner : Character
 {
+    private const int MaxBodyOverlapResolveIterations = 4;
+    private const float BodyOverlapResolvePadding = 0.01f;
+
+    [SerializeField]
+    private Collider bodyCollider;
+    [SerializeField]
+    private Rigidbody rig;
+
     [SerializeField]
     SkinnedMeshRenderer clothMesh;
 
@@ -14,6 +22,8 @@ public class Presoner : Character
 
     [SerializeField]
     GameObject waitirngAvata, presonerAvatar;
+    [SerializeField]
+    private float jailAreaMoveTimeout = 1.5f;
 
     [SerializeField, ReadOnly]
     private bool isTarget;
@@ -39,16 +49,31 @@ public class Presoner : Character
     private RectTransform canvasRect;
     private Camera targetCamera;
     private PresonerSpawner ownerSpawner;
+    private Jail targetJail;
     private Transform moveTarget;
+    private Transform queuedMoveTarget;
     private Vector3 destinationPosition;
     private Quaternion destinationRotation;
     private bool isMovingToDestination;
-    private float visualYawOffset;
+    private bool moveToJailAfterExit;
+    private bool isMovingToJail;
+    private float moveAttemptTimeout = -1f;
+    private float moveAttemptElapsed;
+    private readonly Collider[] overlapResults = new Collider[16];
 
     protected new void Awake()
     {
         base.Awake();
-        visualYawOffset = transform.eulerAngles.y;
+
+        if (bodyCollider == null)
+        {
+            bodyCollider = GetComponent<Collider>();
+        }
+
+        if (rig == null)
+        {
+            rig = GetComponent<Rigidbody>();
+        }
 
         ChangeMode(false);
     }
@@ -76,7 +101,26 @@ public class Presoner : Character
 
         if (isLeaving && !isMovingToDestination)
         {
-            isLeaving = false;
+            if (queuedMoveTarget != null)
+            {
+                Transform nextTarget = queuedMoveTarget;
+                queuedMoveTarget = null;
+                SetMoveTarget(nextTarget);
+            }
+            else if (moveToJailAfterExit && TryMoveToJail())
+            {
+                moveToJailAfterExit = false;
+                }
+                else
+                {
+                    if (isMovingToJail && targetJail != null)
+                    {
+                        targetJail.RegisterPresoner(this);
+                        isMovingToJail = false;
+                    }
+
+                    isLeaving = false;
+            }
         }
     }
 
@@ -144,6 +188,7 @@ public class Presoner : Character
         {
             body = waitirngAvata.transform;
             animator = waitirngAvata.GetComponent<Animator>();
+            SetBodyColliderActive(false);
         }
         else
         {
@@ -216,6 +261,7 @@ public class Presoner : Character
             return;
         }
 
+        queuedMoveTarget = null;
         SetMoveTarget(targetPoint);
         waitIndex = index;
         isTarget = true;
@@ -225,13 +271,22 @@ public class Presoner : Character
         isArrival_Counter = false;
     }
 
-    public void MoveToEndPoint(Transform targetPoint)
+    public void MoveToEndPoint(Transform targetPoint, Transform nextTargetPoint = null)
     {
         if (targetPoint == null)
         {
-            return;
+            if (nextTargetPoint == null)
+            {
+                return;
+            }
+
+            targetPoint = nextTargetPoint;
+            nextTargetPoint = null;
         }
 
+        queuedMoveTarget = nextTargetPoint;
+        moveToJailAfterExit = true;
+        isMovingToJail = false;
         SetMoveTarget(targetPoint);
         waitIndex = -1;
         isTarget = false;
@@ -268,6 +323,10 @@ public class Presoner : Character
         isCompleted = false;
         needHanCuffsCount = Random.Range(1, 6);
         clothMesh.material.color = Random.ColorHSV();
+        targetJail = null;
+        moveToJailAfterExit = false;
+        isMovingToJail = false;
+        SetBodyColliderActive(false);
 
         ChangeMode(false);
 
@@ -289,8 +348,13 @@ public class Presoner : Character
         isLeaving = false;
         isCompleted = false;
         ownerSpawner = null;
+        targetJail = null;
         moveTarget = null;
+        queuedMoveTarget = null;
         isMovingToDestination = false;
+        moveToJailAfterExit = false;
+        isMovingToJail = false;
+        SetBodyColliderActive(false);
     }
 
     private void EnsureBubble()
@@ -330,19 +394,27 @@ public class Presoner : Character
 
     private void MoveTo(Vector3 position, Quaternion rotation)
     {
-        Quaternion uprightRotation = GetUprightRotation(rotation);
+        Quaternion uprightRotation = GetPlanarRotation(rotation);
         transform.SetPositionAndRotation(position, uprightRotation);
         destinationPosition = position;
         destinationRotation = uprightRotation;
         isMovingToDestination = false;
+        ResetMoveAttemptTimeout();
     }
 
     private void SetMoveTarget(Transform targetPoint)
     {
+        SetMoveTarget(targetPoint, -1f);
+    }
+
+    private void SetMoveTarget(Transform targetPoint, float timeout)
+    {
         moveTarget = targetPoint;
         destinationPosition = targetPoint.position;
-        destinationRotation = GetUprightRotation(targetPoint.rotation);
+        destinationRotation = GetPlanarRotation(targetPoint.rotation);
         isMovingToDestination = true;
+        moveAttemptTimeout = timeout;
+        moveAttemptElapsed = 0f;
     }
 
     private void UpdateMovement()
@@ -355,45 +427,152 @@ public class Presoner : Character
         if (moveTarget != null)
         {
             destinationPosition = moveTarget.position;
-            destinationRotation = GetUprightRotation(moveTarget.rotation);
+            destinationRotation = GetPlanarRotation(moveTarget.rotation);
         }
 
-        Vector3 currentPosition = transform.position;
-        Vector3 nextPosition = Vector3.MoveTowards(
-            currentPosition,
-            destinationPosition,
-            status.moveSpeed * Time.deltaTime);
-        transform.position = nextPosition;
+        if (moveAttemptTimeout > 0f)
+        {
+            moveAttemptElapsed += Time.deltaTime;
+            if (moveAttemptElapsed >= moveAttemptTimeout)
+            {
+                isMovingToDestination = false;
+                moveTarget = null;
+                ResetMoveAttemptTimeout();
+                return;
+            }
+        }
 
-        RotateTowardsTarget(destinationRotation);
-
-        if (Vector3.Distance(nextPosition, destinationPosition) <= ArrivalDistance)
+        if (MoveTowardsPosition(destinationPosition, ArrivalDistance))
         {
             transform.position = destinationPosition;
-            transform.rotation = destinationRotation;
             isMovingToDestination = false;
             moveTarget = null;
+            ResetMoveAttemptTimeout();
         }
     }
 
-    private Quaternion GetUprightRotation(Quaternion rotation)
+    private bool TryMoveToJail()
     {
-        Vector3 eulerAngles = rotation.eulerAngles;
-        return Quaternion.Euler(0f, eulerAngles.y + visualYawOffset, 0f);
+        if (targetJail == null)
+        {
+            targetJail = FindObjectOfType<Jail>();
+        }
+
+        if (targetJail == null)
+        {
+            return false;
+        }
+
+        SetBodyColliderActive(true);
+        SetMoveTarget(targetJail.transform);
+        isMovingToJail = true;
+        return true;
     }
 
-    private void RotateTowardsTarget(Quaternion targetRotation)
+    public void MoveToJailArea(Transform targetPoint)
     {
-        if (status.rotationSpeed <= 0f)
+        if (targetPoint == null)
         {
-            transform.rotation = targetRotation;
             return;
         }
 
-        transform.rotation = Quaternion.RotateTowards(
-            transform.rotation,
-            targetRotation,
-            status.rotationSpeed * Time.deltaTime);
+        SetMoveTarget(targetPoint, jailAreaMoveTimeout);
+    }
+
+    private void ResetMoveAttemptTimeout()
+    {
+        moveAttemptTimeout = -1f;
+        moveAttemptElapsed = 0f;
+    }
+
+    private void SetBodyColliderActive(bool active)
+    {
+        if (bodyCollider != null)
+        {
+            bodyCollider.enabled = active;
+
+            if (active)
+            {
+                ResolveBodyOverlap();
+
+                if (rig != null)
+                {
+                    rig.WakeUp();
+                }
+            }
+        }
+    }
+
+    private void ResolveBodyOverlap()
+    {
+        if (bodyCollider == null || !bodyCollider.enabled)
+        {
+            return;
+        }
+
+        Physics.SyncTransforms();
+
+        for (int iteration = 0; iteration < MaxBodyOverlapResolveIterations; ++iteration)
+        {
+            Bounds bounds = bodyCollider.bounds;
+            int overlapCount = Physics.OverlapSphereNonAlloc(
+                bounds.center,
+                bounds.extents.magnitude,
+                overlapResults,
+                ~0,
+                QueryTriggerInteraction.Ignore);
+
+            Vector3 totalSeparation = Vector3.zero;
+            bool hasOverlap = false;
+
+            for (int i = 0; i < overlapCount; ++i)
+            {
+                Collider otherCollider = overlapResults[i];
+                overlapResults[i] = null;
+
+                if (otherCollider == null
+                    || otherCollider == bodyCollider
+                    || otherCollider.transform == transform
+                    || otherCollider.transform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                if (!Physics.ComputePenetration(
+                    bodyCollider,
+                    transform.position,
+                    transform.rotation,
+                    otherCollider,
+                    otherCollider.transform.position,
+                    otherCollider.transform.rotation,
+                    out Vector3 separationDirection,
+                    out float separationDistance))
+                {
+                    continue;
+                }
+
+                hasOverlap = true;
+                totalSeparation += separationDirection * (separationDistance + BodyOverlapResolvePadding);
+            }
+
+            if (!hasOverlap || totalSeparation.sqrMagnitude <= 0.0001f)
+            {
+                break;
+            }
+
+            Vector3 resolvedPosition = transform.position + totalSeparation;
+
+            if (rig != null && !rig.isKinematic)
+            {
+                rig.position = resolvedPosition;
+            }
+            else
+            {
+                transform.position = resolvedPosition;
+            }
+
+            Physics.SyncTransforms();
+        }
     }
 
     public bool IsArrivalCounter => isArrival_Counter;
