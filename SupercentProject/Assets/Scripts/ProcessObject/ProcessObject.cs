@@ -6,8 +6,15 @@ using UnityEngine;
 
 public abstract class ProcessObject : BaseObject
 {
+    [SerializeField]
+    protected AudioClip pushSound, popSound; 
+    [SerializeField]
+    protected AudioClip inputEnterSound, outputEntertSound;
+
     private const string DefaultInputStackRootName = "Resources_Input";
     private const string DefaultOutputStackRootName = "Resources_Output";
+    private const float DefaultResourceOperationInterval = 0.05f;
+    private const float DefaultTransferDuration = 0.05f;
 
     protected struct PendingInputRequest
     {
@@ -71,17 +78,17 @@ public abstract class ProcessObject : BaseObject
 
     private bool[] inputSlotsPendingClear;
     private bool[] inputSlotsPendingFill;
+    private bool[] outputSlotsPendingClear;
     private readonly Queue<PendingResourceOperation> pendingResourceOperations = new Queue<PendingResourceOperation>();
     private int lastProcessedResourceOperationFrame = -1;
 
     protected void Awake()
     {
         EnsureInputSlotStateCache();
-
-        for (int i = 0; i < inputResourcesStack.Count; ++i)
-            inputResourcesStack[i].gameObject.SetActive(false);
-        for (int i = 0; i < outputResourcesStack.Count; ++i)
-            outputResourcesStack[i].gameObject.SetActive(false);
+        EnsureOutputSlotStateCache();
+        ClampResourceCountsToStackCapacity();
+        DeactivateStack(inputResourcesStack);
+        DeactivateStack(outputResourcesStack);
     }
 
     public void AutoFillResourceStacks()
@@ -93,9 +100,8 @@ public abstract class ProcessObject : BaseObject
         FillStackFromRoot(outputStackRoot, ref outputResourcesStack);
 
         EnsureInputSlotStateCache();
-
-        inputCount = Mathf.Clamp(inputCount, 0, inputResourcesStack != null ? inputResourcesStack.Count : 0);
-        outputCount = Mathf.Clamp(outputCount, 0, outputResourcesStack != null ? outputResourcesStack.Count : 0);
+        EnsureOutputSlotStateCache();
+        ClampResourceCountsToStackCapacity();
     }
 
     protected void Update()
@@ -108,20 +114,22 @@ public abstract class ProcessObject : BaseObject
 
         if (enterInput || enterOutput)
         {
-            if (tickTIme == 0f || tickTIme >= 0.1f)
+            if (tickTIme == 0f || tickTIme >= DefaultResourceOperationInterval)
             {
                 if (enterInput
                     && playerController.GetResourceCount(inputResourceType) > 0
                     && CanAddInputResource())
                 {
                     AddInputResource();
+                    PlaySound(pushSound);
                 }
 
                 if (enterOutput && CanSubOutputResource())
                 {
                     SubOutputResource();
+                    PlaySound(popSound);
                 }
-                
+
                 tickTIme = 0f;
             }
 
@@ -149,6 +157,9 @@ public abstract class ProcessObject : BaseObject
     public void EnterOutputAreaEvent()
     {
         enterOutput = true;
+
+        if (outputCount > 0)
+            PlaySound(outputEntertSound);
     }
 
     public void OutOutputAreaEvent()
@@ -172,7 +183,7 @@ public abstract class ProcessObject : BaseObject
 
         playerController.SubResrouce(inputResourceType);
 
-        if (!EnqueueInputRequest(sourceResource, 0.25f, false, 0f, 0))
+        if (!EnqueueInputRequest(sourceResource, DefaultTransferDuration, false, 0f, 0))
         {
             playerController.AddResource(inputResourceType);
         }
@@ -216,25 +227,47 @@ public abstract class ProcessObject : BaseObject
             return null;
         }
 
-        return inputResourcesStack[nextInputIndex];
+        return GetStackResource(inputResourcesStack, nextInputIndex);
     }
 
     public PortableResource GetNextOutputResource()
     {
-        return outputResourcesStack[outputCount];
-    }
-
-    public PortableResource GetCurrentOutputResource()
-    {
-        if (outputCount <= 0)
+        int nextOutputIndex = GetNextOutputResourceIndex();
+        if (nextOutputIndex < 0)
         {
             return null;
         }
 
-        return outputResourcesStack[outputCount - 1];
+        return GetStackResource(outputResourcesStack, nextOutputIndex);
+    }
+
+    public PortableResource GetCurrentOutputResource()
+    {
+        int currentOutputIndex = GetCurrentOutputResourceIndex();
+        if (currentOutputIndex < 0)
+        {
+            return null;
+        }
+
+        return GetStackResource(outputResourcesStack, currentOutputIndex);
+    }
+
+    protected int GetCurrentOutputResourceSlotIndex()
+    {
+        return GetCurrentOutputResourceIndex();
+    }
+
+    protected int GetNextOutputResourceSlotIndex()
+    {
+        return GetNextOutputResourceIndex();
     }
 
     public bool TryAddExternalInputResource(PortableResource sourceResource, float duration, float jumpPower = 1f, int jumpCount = 1)
+    {
+        return TryAddExternalInputResource(sourceResource, duration, true, jumpPower, jumpCount);
+    }
+
+    public bool TryAddExternalInputResource(PortableResource sourceResource, float duration, bool useJumpAnimation, float jumpPower = 1f, int jumpCount = 1)
     {
         if (sourceResource == null)
         {
@@ -246,7 +279,7 @@ public abstract class ProcessObject : BaseObject
             return false;
         }
 
-        return EnqueueInputRequest(sourceResource, duration, true, jumpPower, jumpCount);
+        return EnqueueInputRequest(sourceResource, duration, useJumpAnimation, jumpPower, jumpCount);
     }
 
     protected virtual bool CanAddInputResource()
@@ -256,16 +289,19 @@ public abstract class ProcessObject : BaseObject
 
     protected virtual bool CanSubInputResource()
     {
+        ClampResourceCountsToStackCapacity();
         return inputCount - pendingSubInputRequests > 0;
     }
 
     protected virtual bool CanAddOutputResource()
     {
+        ClampResourceCountsToStackCapacity();
         return GetAvailableQueuedOutputCapacity() > 0;
     }
 
     protected virtual bool CanSubOutputResource()
     {
+        ClampResourceCountsToStackCapacity();
         PlayerController playerController = GetPlayerController();
         return playerController != null
             && playerController.CanAddResource(outputResourceType)
@@ -329,6 +365,44 @@ public abstract class ProcessObject : BaseObject
         }
     }
 
+    private void DeactivateStack(List<PortableResource> stack)
+    {
+        if (stack == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < stack.Count; ++i)
+        {
+            PortableResource portableResource = stack[i];
+            if (portableResource != null)
+            {
+                portableResource.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    protected PortableResource GetStackResource(List<PortableResource> stack, int index)
+    {
+        if (stack == null || index < 0 || index >= stack.Count)
+        {
+            return null;
+        }
+
+        return stack[index];
+    }
+
+    protected int GetStackCount(List<PortableResource> stack)
+    {
+        return stack != null ? stack.Count : 0;
+    }
+
+    private void ClampResourceCountsToStackCapacity()
+    {
+        inputCount = Mathf.Clamp(inputCount, 0, GetStackCount(inputResourcesStack));
+        outputCount = Mathf.Clamp(outputCount, 0, GetStackCount(outputResourcesStack));
+    }
+
     private int GetNextInputResourceIndex()
     {
         EnsureInputSlotStateCache();
@@ -338,9 +412,17 @@ public abstract class ProcessObject : BaseObject
             return -1;
         }
 
-        for (int i = inputCount; i < inputResourcesStack.Count; ++i)
+        for (int i = 0; i < inputResourcesStack.Count; ++i)
         {
-            if (inputSlotsPendingClear[i] || inputSlotsPendingFill[i])
+            if (inputSlotsPendingClear[i])
+            {
+                return -1;
+            }
+
+            PortableResource portableResource = inputResourcesStack[i];
+            bool isOccupied = portableResource != null && portableResource.gameObject.activeSelf;
+
+            if (inputSlotsPendingFill[i] || isOccupied)
             {
                 continue;
             }
@@ -419,6 +501,8 @@ public abstract class ProcessObject : BaseObject
 
     private void RefreshInputCountFromSlots()
     {
+        EnsureInputSlotStateCache();
+
         if (inputResourcesStack == null)
         {
             inputCount = 0;
@@ -449,6 +533,37 @@ public abstract class ProcessObject : BaseObject
         }
 
         inputCount = occupiedCount;
+    }
+
+    private void RefreshOutputCountFromSlots()
+    {
+        EnsureOutputSlotStateCache();
+
+        if (outputResourcesStack == null)
+        {
+            outputCount = 0;
+            return;
+        }
+
+        int occupiedCount = 0;
+
+        for (int i = 0; i < outputResourcesStack.Count; ++i)
+        {
+            if (outputSlotsPendingClear != null && outputSlotsPendingClear[i])
+            {
+                break;
+            }
+
+            PortableResource portableResource = outputResourcesStack[i];
+            if (portableResource == null || !portableResource.gameObject.activeSelf)
+            {
+                break;
+            }
+
+            ++occupiedCount;
+        }
+
+        outputCount = occupiedCount;
     }
 
     private void FlushPendingResourceOperations()
@@ -497,7 +612,7 @@ public abstract class ProcessObject : BaseObject
             return false;
         }
 
-        PortableResource targetResource = inputResourcesStack[nextInputIndex];
+        PortableResource targetResource = GetStackResource(inputResourcesStack, nextInputIndex);
         if (targetResource == null || pendingRequest.SourceResource == null)
         {
             return true;
@@ -544,9 +659,19 @@ public abstract class ProcessObject : BaseObject
         }
 
         EnsureInputSlotStateCache();
+        ClampResourceCountsToStackCapacity();
 
         int targetIndex = inputCount - 1;
-        PortableResource targetResource = inputResourcesStack[targetIndex];
+        if (targetIndex < 0
+            || inputResourcesStack == null
+            || targetIndex >= inputResourcesStack.Count
+            || targetIndex >= inputSlotsPendingClear.Length)
+        {
+            RefreshInputCountFromSlots();
+            return true;
+        }
+
+        PortableResource targetResource = GetStackResource(inputResourcesStack, targetIndex);
         inputSlotsPendingClear[targetIndex] = true;
         --inputCount;
 
@@ -574,24 +699,27 @@ public abstract class ProcessObject : BaseObject
 
     protected virtual bool TryExecuteQueuedAddOutputResource()
     {
-        if (outputResourcesStack == null || outputCount >= outputResourcesStack.Count)
+        int nextOutputIndex = GetNextOutputResourceIndex();
+        if (nextOutputIndex < 0)
         {
-            return true;
+            return false;
         }
 
-        PortableResource targetResource = GetNextOutputResource();
+        PortableResource targetResource = GetStackResource(outputResourcesStack, nextOutputIndex);
         if (targetResource == null)
         {
             return true;
         }
 
         targetResource.gameObject.SetActive(true);
-        ++outputCount;
+        RefreshOutputCountFromSlots();
         return true;
     }
 
     protected virtual bool TryExecuteQueuedSubOutputResource()
     {
+        RefreshOutputCountFromSlots();
+
         PlayerController playerController = GetPlayerController();
         if (playerController == null)
         {
@@ -608,12 +736,21 @@ public abstract class ProcessObject : BaseObject
             return true;
         }
 
-        PortableResource sourceResource = GetCurrentOutputResource();
+        int sourceIndex = GetCurrentOutputResourceIndex();
+        if (sourceIndex < 0)
+        {
+            return true;
+        }
+
+        PortableResource sourceResource = GetStackResource(outputResourcesStack, sourceIndex);
         PortableResource targetResource = playerController.GetPoppedResource(outputResourceType);
         if (sourceResource == null || targetResource == null)
         {
             return true;
         }
+
+        outputSlotsPendingClear[sourceIndex] = true;
+        RefreshOutputCountFromSlots();
 
         playerController.AddResource(outputResourceType);
         sourceResource.PlayTransferAnimation
@@ -621,11 +758,11 @@ public abstract class ProcessObject : BaseObject
             sourceResource.transform.position,
             targetResource.transform.position,
             targetResource.transform.eulerAngles,
-            0.25f,
-            targetResource.gameObject
+            DefaultTransferDuration,
+            targetResource.gameObject,
+            () => FinalizeConsumedOutputSlot(sourceIndex, sourceResource)
         );
 
-        --outputCount;
         return true;
     }
 
@@ -646,46 +783,44 @@ public abstract class ProcessObject : BaseObject
 
     private int GetAvailableQueuedInputCapacity()
     {
-        int totalInputSlotCount = inputResourcesStack != null ? inputResourcesStack.Count : 0;
+        int totalInputSlotCount = GetStackCount(inputResourcesStack);
         if (totalInputSlotCount <= 0)
         {
             return 0;
         }
 
-        EnsureInputSlotStateCache();
-
-        int reservedSlotCount = inputCount;
-
-        for (int i = 0; i < inputSlotsPendingClear.Length; ++i)
+        int nextInputIndex = GetNextInputResourceIndex();
+        if (nextInputIndex < 0)
         {
-            if (inputSlotsPendingClear[i])
-            {
-                ++reservedSlotCount;
-            }
-
-            if (inputSlotsPendingFill[i])
-            {
-                ++reservedSlotCount;
-            }
+            return 0;
         }
 
-        return totalInputSlotCount - reservedSlotCount - pendingAddInputRequestCount;
+        return Mathf.Max(0, totalInputSlotCount - nextInputIndex - pendingAddInputRequestCount);
     }
 
     private int GetAvailableQueuedOutputCount()
     {
+        RefreshOutputCountFromSlots();
         return Mathf.Max(0, outputCount + pendingAddOutputRequestCount - pendingSubOutputRequestCount);
     }
 
     private int GetAvailableQueuedOutputCapacity()
     {
-        int totalOutputSlotCount = outputResourcesStack != null ? outputResourcesStack.Count : 0;
+        RefreshOutputCountFromSlots();
+
+        int totalOutputSlotCount = GetStackCount(outputResourcesStack);
         if (totalOutputSlotCount <= 0)
         {
             return 0;
         }
 
-        return Mathf.Max(0, totalOutputSlotCount - GetAvailableQueuedOutputCount());
+        int firstEmptyIndex = GetNextOutputResourceIndex();
+        if (firstEmptyIndex < 0)
+        {
+            return 0;
+        }
+
+        return Mathf.Max(0, totalOutputSlotCount - firstEmptyIndex - pendingAddOutputRequestCount);
     }
 
     private bool IsInputSlotPendingClear(int targetIndex)
@@ -708,6 +843,103 @@ public abstract class ProcessObject : BaseObject
         {
             inputSlotsPendingFill = new bool[inputStackCount];
         }
+    }
+
+    private void EnsureOutputSlotStateCache()
+    {
+        int outputStackCount = outputResourcesStack != null ? outputResourcesStack.Count : 0;
+        if (outputSlotsPendingClear == null || outputSlotsPendingClear.Length != outputStackCount)
+        {
+            outputSlotsPendingClear = new bool[outputStackCount];
+        }
+    }
+
+    private int GetNextOutputResourceIndex()
+    {
+        EnsureOutputSlotStateCache();
+        RefreshOutputCountFromSlots();
+
+        if (outputResourcesStack == null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < outputResourcesStack.Count; ++i)
+        {
+            if (outputSlotsPendingClear != null && outputSlotsPendingClear[i])
+            {
+                return -1;
+            }
+
+            PortableResource portableResource = outputResourcesStack[i];
+            if (portableResource == null || !portableResource.gameObject.activeSelf)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private int GetCurrentOutputResourceIndex()
+    {
+        EnsureOutputSlotStateCache();
+        RefreshOutputCountFromSlots();
+
+        if (outputResourcesStack == null)
+        {
+            return -1;
+        }
+
+        for (int i = outputResourcesStack.Count - 1; i >= 0; --i)
+        {
+            if (outputSlotsPendingClear != null && outputSlotsPendingClear[i])
+            {
+                continue;
+            }
+
+            PortableResource portableResource = outputResourcesStack[i];
+            if (portableResource != null && portableResource.gameObject.activeSelf)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    protected void ReserveOutputSlotClear(int targetIndex)
+    {
+        EnsureOutputSlotStateCache();
+
+        if (targetIndex < 0 || targetIndex >= outputSlotsPendingClear.Length)
+        {
+            return;
+        }
+
+        outputSlotsPendingClear[targetIndex] = true;
+        RefreshOutputCountFromSlots();
+    }
+
+    protected void FinalizeConsumedOutputSlot(int targetIndex, PortableResource targetResource)
+    {
+        if (outputSlotsPendingClear == null
+            || targetIndex < 0
+            || targetIndex >= outputSlotsPendingClear.Length
+            || !outputSlotsPendingClear[targetIndex])
+        {
+            return;
+        }
+
+        outputSlotsPendingClear[targetIndex] = false;
+
+        if (targetResource != null)
+        {
+            targetResource.transform.localScale = Vector3.one;
+            targetResource.gameObject.SetActive(false);
+        }
+
+        RefreshOutputCountFromSlots();
     }
 
     private bool EnqueueOperation(PendingResourceOperationType operationType)

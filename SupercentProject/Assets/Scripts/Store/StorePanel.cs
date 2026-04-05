@@ -8,8 +8,8 @@ using UnityEngine.UI;
 
 public class StorePanel : BaseObject
 {
-    private const float DefaultAbsorbInterval = 0.1f;
-    private const float DefaultTransferDuration = 0.1f;
+    private const float DefaultAbsorbInterval = 0.05f;
+    private const float DefaultTransferDuration = 0.05f;
 
     [SerializeField]
     private int price;
@@ -34,6 +34,9 @@ public class StorePanel : BaseObject
 
     private float absorbTickTime;
     private bool isCompleted;
+
+    [SerializeField]
+    private AudioClip pushSound, completeSound;
 
     private void Awake()
     {
@@ -118,6 +121,8 @@ public class StorePanel : BaseObject
                 transferDuration,
                 null
                 );
+
+            PlaySound(pushSound);
         }
 
         price = Mathf.Max(0, price - 1);
@@ -128,6 +133,7 @@ public class StorePanel : BaseObject
         if (price <= 0)
         {
             CompleteStore();
+            player.PlaySound(completeSound);
         }
     }
 

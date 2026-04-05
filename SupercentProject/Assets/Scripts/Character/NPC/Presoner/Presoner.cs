@@ -7,8 +7,16 @@ using static WaitingLine;
 
 public class Presoner : Character
 {
+    private enum JailMoveResult
+    {
+        Started,
+        Waiting,
+        Failed,
+    }
+
     private const int MaxBodyOverlapResolveIterations = 4;
     private const float BodyOverlapResolvePadding = 0.01f;
+    private const float BubbleWorldOffsetY = 1.5f;
 
     [SerializeField]
     private Collider bodyCollider;
@@ -52,11 +60,13 @@ public class Presoner : Character
     private Jail targetJail;
     private Transform moveTarget;
     private Transform queuedMoveTarget;
+    private Transform jailEntryPointTarget;
     private Vector3 destinationPosition;
     private Quaternion destinationRotation;
     private bool isMovingToDestination;
     private bool moveToJailAfterExit;
     private bool isMovingToJail;
+    private bool queuedMoveRequiresJailQueue;
     private float moveAttemptTimeout = -1f;
     private float moveAttemptElapsed;
     private readonly Collider[] overlapResults = new Collider[16];
@@ -105,21 +115,49 @@ public class Presoner : Character
             {
                 Transform nextTarget = queuedMoveTarget;
                 queuedMoveTarget = null;
+                queuedMoveRequiresJailQueue = false;
                 SetMoveTarget(nextTarget);
             }
-            else if (moveToJailAfterExit && TryMoveToJail())
+            else if (moveToJailAfterExit)
             {
-                moveToJailAfterExit = false;
+                if (jailEntryPointTarget != null)
+                {
+                    if (!TryMoveToJailEntryPoint())
+                    {
+                        return;
+                    }
+
+                    Transform nextTarget = jailEntryPointTarget;
+                    jailEntryPointTarget = null;
+                    SetMoveTarget(nextTarget);
+                    return;
+                }
+
+                JailMoveResult jailMoveResult = TryMoveToJail();
+
+                if (jailMoveResult == JailMoveResult.Started)
+                {
+                    moveToJailAfterExit = false;
+                }
+                else if (jailMoveResult == JailMoveResult.Waiting)
+                {
+                    return;
                 }
                 else
                 {
-                    if (isMovingToJail && targetJail != null)
-                    {
-                        targetJail.RegisterPresoner(this);
-                        isMovingToJail = false;
-                    }
-
+                    CancelJailApproach();
                     isLeaving = false;
+                }
+            }
+            else
+            {
+                if (isMovingToJail && targetJail != null)
+                {
+                    targetJail.RegisterPresoner(this);
+                    isMovingToJail = false;
+                }
+
+                isLeaving = false;
             }
         }
     }
@@ -161,9 +199,11 @@ public class Presoner : Character
             }
         }
 
-        Vector3 screenPoint = targetCamera.WorldToScreenPoint(transform.position + Vector3.up * 1.5f);
+        Canvas mainCanvas = UIManager.Instance != null ? UIManager.Instance.MainCanvas : null;
+        Camera uiCamera = GetBubbleUICamera(mainCanvas);
+        Vector3 screenPoint = targetCamera.WorldToScreenPoint(transform.position + Vector3.up * BubbleWorldOffsetY);
 
-        if (screenPoint.z <= 0f)
+        if (screenPoint.z <= 0f || !IsScreenPointVisible(screenPoint))
         {
             if (bubble.gameObject.activeSelf)
             {
@@ -178,8 +218,15 @@ public class Presoner : Character
             bubble.gameObject.SetActive(true);
         }
 
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, null, out Vector2 localPoint);
-        bubbleRect.anchoredPosition = localPoint;
+        if (mainCanvas == null || mainCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+        {
+            bubbleRect.position = screenPoint;
+        }
+        else if (canvasRect != null
+            && RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, uiCamera, out Vector2 localPoint))
+        {
+            bubbleRect.anchoredPosition = localPoint;
+        }
     }
 
     public void ChangeMode(bool presoner)
@@ -262,6 +309,7 @@ public class Presoner : Character
         }
 
         queuedMoveTarget = null;
+        jailEntryPointTarget = null;
         SetMoveTarget(targetPoint);
         waitIndex = index;
         isTarget = true;
@@ -271,7 +319,7 @@ public class Presoner : Character
         isArrival_Counter = false;
     }
 
-    public void MoveToEndPoint(Transform targetPoint, Transform nextTargetPoint = null)
+    public void MoveToEndPoint(Transform targetPoint, Transform nextTargetPoint = null, Transform jailEntryTargetPoint = null)
     {
         if (targetPoint == null)
         {
@@ -285,7 +333,10 @@ public class Presoner : Character
         }
 
         queuedMoveTarget = nextTargetPoint;
+        jailEntryPointTarget = jailEntryTargetPoint;
         moveToJailAfterExit = true;
+        queuedMoveRequiresJailQueue = nextTargetPoint != null;
+        MarkJailApproachStarted();
         isMovingToJail = false;
         SetMoveTarget(targetPoint);
         waitIndex = -1;
@@ -314,6 +365,7 @@ public class Presoner : Character
 
     public void PrepareForSpawn(PresonerSpawner spawner, Transform spawnPoint)
     {
+        CancelJailApproach();
         ownerSpawner = spawner;
         waitIndex = -1;
         isTarget = false;
@@ -326,6 +378,8 @@ public class Presoner : Character
         targetJail = null;
         moveToJailAfterExit = false;
         isMovingToJail = false;
+        queuedMoveRequiresJailQueue = false;
+        jailEntryPointTarget = null;
         SetBodyColliderActive(false);
 
         ChangeMode(false);
@@ -341,6 +395,7 @@ public class Presoner : Character
 
     public void ResetForPool()
     {
+        CancelJailApproach();
         waitIndex = -1;
         isTarget = false;
         isArrival = false;
@@ -351,9 +406,11 @@ public class Presoner : Character
         targetJail = null;
         moveTarget = null;
         queuedMoveTarget = null;
+        jailEntryPointTarget = null;
         isMovingToDestination = false;
         moveToJailAfterExit = false;
         isMovingToJail = false;
+        queuedMoveRequiresJailQueue = false;
         SetBodyColliderActive(false);
     }
 
@@ -390,6 +447,24 @@ public class Presoner : Character
 
         bubbleRect = null;
         canvasRect = null;
+    }
+
+    private Camera GetBubbleUICamera(Canvas mainCanvas)
+    {
+        if (mainCanvas == null || mainCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+        {
+            return null;
+        }
+
+        return mainCanvas.worldCamera != null ? mainCanvas.worldCamera : targetCamera;
+    }
+
+    private bool IsScreenPointVisible(Vector3 screenPoint)
+    {
+        return screenPoint.x >= 0f
+            && screenPoint.x <= Screen.width
+            && screenPoint.y >= 0f
+            && screenPoint.y <= Screen.height;
     }
 
     private void MoveTo(Vector3 position, Quaternion rotation)
@@ -451,7 +526,22 @@ public class Presoner : Character
         }
     }
 
-    private bool TryMoveToJail()
+    private bool CanAdvanceToQueuedMoveTarget()
+    {
+        if (targetJail == null)
+        {
+            targetJail = FindObjectOfType<Jail>();
+        }
+
+        if (targetJail == null)
+        {
+            return true;
+        }
+
+        return targetJail.CanPresonerAdvanceToExitPoint(this);
+    }
+
+    private bool TryMoveToJailEntryPoint()
     {
         if (targetJail == null)
         {
@@ -463,10 +553,31 @@ public class Presoner : Character
             return false;
         }
 
+        return targetJail.TryReservePresonerEntry(this);
+    }
+
+    private JailMoveResult TryMoveToJail()
+    {
+        if (targetJail == null)
+        {
+            targetJail = FindObjectOfType<Jail>();
+        }
+
+        if (targetJail == null)
+        {
+            return JailMoveResult.Failed;
+        }
+
+        if (!targetJail.HasReservedPresonerEntry(this)
+            && !targetJail.TryReservePresonerEntry(this))
+        {
+            return JailMoveResult.Waiting;
+        }
+
         SetBodyColliderActive(true);
         SetMoveTarget(targetJail.transform);
         isMovingToJail = true;
-        return true;
+        return JailMoveResult.Started;
     }
 
     public void MoveToJailArea(Transform targetPoint)
@@ -483,6 +594,29 @@ public class Presoner : Character
     {
         moveAttemptTimeout = -1f;
         moveAttemptElapsed = 0f;
+    }
+
+    private void CancelJailApproach()
+    {
+        if (targetJail != null)
+        {
+            targetJail.NotifyPresonerApproachCancelled(this);
+        }
+
+        isMovingToJail = false;
+    }
+
+    private void MarkJailApproachStarted()
+    {
+        if (targetJail == null)
+        {
+            targetJail = FindObjectOfType<Jail>();
+        }
+
+        if (targetJail != null)
+        {
+            targetJail.NotifyPresonerApproaching(this);
+        }
     }
 
     private void SetBodyColliderActive(bool active)
@@ -580,4 +714,9 @@ public class Presoner : Character
     public int WaitIndex => waitIndex;
     public bool IsLeaving => isLeaving;
     public bool IsCompleted => isCompleted;
+    public bool IsMovingToJail => isMovingToJail;
+    public bool IsWaitingForJailEntry => isLeaving
+        && !isMovingToDestination
+        && moveToJailAfterExit
+        && jailEntryPointTarget != null;
 }

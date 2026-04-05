@@ -63,4 +63,6 @@ public class Vehicle : MiningTool
             drills[i].localEulerAngles = Vector3.right * 90f;
         }
     }
+
+    public bool IsRotating => rotateTimer > 0f;
 }

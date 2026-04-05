@@ -1,11 +1,16 @@
+using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
 
+    [SerializeField]
+    Camera mainCam;
     [SerializeField]
     private Canvas mainCanvas;
 
@@ -13,11 +18,18 @@ public class UIManager : MonoBehaviour
     private Transform bubblePoolRoot;
 
     [SerializeField]
+    TextMeshProUGUI moneyCount;
+
+    [SerializeField]
     private bool preloadSceneBubbles = true;
 
     private readonly Queue<NeedBubble> bubblePool = new Queue<NeedBubble>();
     private readonly HashSet<NeedBubble> activeBubbles = new HashSet<NeedBubble>();
     private NeedBubble bubbleTemplate;
+    private int displayedMoneyCount = int.MinValue;
+
+    [SerializeField]
+    private Image fadeImage;
 
     public Canvas MainCanvas => mainCanvas;
 
@@ -68,6 +80,17 @@ public class UIManager : MonoBehaviour
             RegisterBubble(sceneBubbles[i]);
             ReturnBubbleToPool(sceneBubbles[i]);
         }
+    }
+
+    private void OnEnable()
+    {
+        displayedMoneyCount = int.MinValue;
+        RefreshMoneyCount(true);
+    }
+
+    private void LateUpdate()
+    {
+        RefreshMoneyCount(false);
     }
 
     public NeedBubble GetBubble(Transform parent = null)
@@ -155,4 +178,42 @@ public class UIManager : MonoBehaviour
         bubble.SetPooled(true);
         bubblePool.Enqueue(bubble);
     }
+
+    private void RefreshMoneyCount(bool force)
+    {
+        if (moneyCount == null)
+        {
+            return;
+        }
+
+        int currentMoneyCount = GetCurrentMoneyCount();
+        if (!force && displayedMoneyCount == currentMoneyCount)
+        {
+            return;
+        }
+
+        displayedMoneyCount = currentMoneyCount;
+        moneyCount.text = currentMoneyCount.ToString();
+    }
+
+    private int GetCurrentMoneyCount()
+    {
+        if (GameManager.Instance == null || GameManager.Instance.Player == null || GameManager.Instance.Player.Controller == null)
+        {
+            return 0;
+        }
+
+        return GameManager.Instance.Player.Controller.MoneyCount;
+    }
+
+    public void Ending()
+    {
+        Camera.main.DOOrthoSize(7.5f, 1f);
+
+        fadeImage.color = new Color(0f, 0f, 0f, 0f);
+        fadeImage.gameObject.SetActive(true);
+
+        fadeImage.DOFade(1f, 2f).OnComplete(() => fadeImage.transform.GetChild(0).gameObject.SetActive(true)).SetDelay(3f);
+    }
 }
+

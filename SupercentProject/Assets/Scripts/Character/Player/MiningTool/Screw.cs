@@ -33,4 +33,6 @@ public class Screw : MiningTool
     {
         rotateTimer = rotateDuration;
     }
+
+    public bool IsRotating => rotateTimer > 0f;
 }

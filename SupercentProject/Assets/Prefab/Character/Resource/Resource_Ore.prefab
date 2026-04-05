@@ -16,7 +16,7 @@ GameObject:
   m_TagString: Ore
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 4
+  m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!4 &5322871235126062150
 Transform:
@@ -47,6 +47,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   objectName: Ore
+  audioSource: {fileID: 0}
   renderObj: {fileID: 2667196740815797517}
   alive: 1
 --- !u!65 &8069723849305213132

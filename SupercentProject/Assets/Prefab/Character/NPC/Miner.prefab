@@ -79,8 +79,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   objectName: Miner
+  audioSource: {fileID: 0}
   status:
-    moveSpeed: 2
+    moveSpeed: 0.5
     rotationSpeed: 360
   body: {fileID: 7192587100625417211}
   animator: {fileID: 8935405369993931600}
@@ -92,7 +93,8 @@ MonoBehaviour:
   retargetDelay: 0.5
   portableOre: {fileID: 3581901203073252322}
   targetFactory: {fileID: 0}
-  portableOreTransferDuration: 0.5
+  portableOreTransferDuration: 0.3
+  portableOreTransferRetryInterval: 0.05
   portableOreJumpPower: 1
   portableOreJumpCount: 1
   currentTargetIndex: -1

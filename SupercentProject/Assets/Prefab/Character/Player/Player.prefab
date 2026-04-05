@@ -388,6 +388,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   objectName: Player
+  audioSource: {fileID: 0}
   status:
     moveSpeed: 2
     rotationSpeed: 720
@@ -1477,7 +1478,7 @@ MonoBehaviour:
   blockedRayColor: {r: 1, g: 0, b: 0, a: 1}
   showTickMiningDebug: 1
   tickMiningHeight: 0.5
-  tickMiningBack: 0.25
+  tickMiningBack: 0
   tickMiningIdleColor: {r: 0, g: 1, b: 1, a: 1}
   tickMiningOreColor: {r: 1, g: 0, b: 1, a: 1}
   tickMiningBlockedColor: {r: 1, g: 0, b: 0, a: 1}
@@ -1495,6 +1496,8 @@ MonoBehaviour:
   tickMiningCenter: {x: 0, y: 0, z: 0}
   tickMiningOverlapCount: 0
   tickMiningOreCount: 0
+  pickSound: {fileID: 0}
+  drillSound: {fileID: 0}
 --- !u!95 &2854579595911475480
 Animator:
   serializedVersion: 5

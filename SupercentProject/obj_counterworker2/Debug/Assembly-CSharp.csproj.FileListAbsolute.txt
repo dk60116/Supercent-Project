@@ -1,0 +1,8 @@
+C:\Git\SupercentProject\SupercentProject\Temp\bin\CounterWorker2\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\Temp\bin\CounterWorker2\Assembly-CSharp.pdb
+C:\Git\SupercentProject\SupercentProject\Temp\bin\CounterWorker2\Assembly-CSharp-firstpass.pdb
+C:\Git\SupercentProject\SupercentProject\obj_counterworker2\Debug\Assembly-CSharp.csproj.AssemblyReference.cache
+C:\Git\SupercentProject\SupercentProject\obj_counterworker2\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
+C:\Git\SupercentProject\SupercentProject\obj_counterworker2\Debug\Assembly.44154EF1.Up2Date
+C:\Git\SupercentProject\SupercentProject\obj_counterworker2\Debug\Assembly-CSharp.dll
+C:\Git\SupercentProject\SupercentProject\obj_counterworker2\Debug\Assembly-CSharp.pdb

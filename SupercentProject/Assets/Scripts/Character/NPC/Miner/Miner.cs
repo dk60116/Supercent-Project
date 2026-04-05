@@ -6,11 +6,12 @@ public class Miner : Character
 {
     private static readonly int MoveHash = Animator.StringToHash("bMove");
     private static readonly int PickingHash = Animator.StringToHash("tPicking");
+    private static readonly int PickStateHash = Animator.StringToHash("Pick");
     private const float ArrivalDistance = 0.05f;
     private const float FacingAngleThreshold = 1f;
     private const float DefaultRetargetDelay = 0.5f;
-    private const float MiningTriggerInterval = 0.5f;
-    private const float MiningConsumeDelay = 2f;
+    private const float DefaultPortableOreTransferDuration = 0.2f;
+    private const float DefaultPortableOreTransferRetryInterval = 0.05f;
     private const int MiningTriggerCount = 2;
 
     [SerializeField]
@@ -29,7 +30,9 @@ public class Miner : Character
     [SerializeField]
     private PObj_Factory targetFactory;
     [SerializeField]
-    private float portableOreTransferDuration = 0.5f;
+    private float portableOreTransferDuration = DefaultPortableOreTransferDuration;
+    [SerializeField]
+    private float portableOreTransferRetryInterval = DefaultPortableOreTransferRetryInterval;
     [SerializeField]
     private float portableOreJumpPower = 1f;
     [SerializeField]
@@ -241,24 +244,61 @@ public class Miner : Character
 
         for (int i = 0; i < MiningTriggerCount; ++i)
         {
+            if (targetOre == null || !targetOre.IsAlive)
+            {
+                yield break;
+            }
+
             if (Animator != null)
             {
                 Animator.SetTrigger(PickingHash);
+                yield return WaitForPickAnimationToComplete(targetOre);
             }
-
-            yield return new WaitForSeconds(MiningTriggerInterval);
-        }
-
-        float remainingConsumeDelay = Mathf.Max(0f, MiningConsumeDelay - (MiningTriggerInterval * MiningTriggerCount));
-        if (remainingConsumeDelay > 0f)
-        {
-            yield return new WaitForSeconds(remainingConsumeDelay);
+            else
+            {
+                yield return null;
+            }
         }
 
         if (targetOre != null && targetOre.IsAlive)
         {
             targetOre.ConsumeResource();
-            TryTransferPortableOreToFactory();
+            yield return TransferPortableOreToFactory();
+        }
+    }
+
+    private IEnumerator WaitForPickAnimationToComplete(Resource targetOre)
+    {
+        while (Animator != null && targetOre != null && targetOre.IsAlive)
+        {
+            if (!Animator.IsInTransition(0))
+            {
+                AnimatorStateInfo stateInfo = Animator.GetCurrentAnimatorStateInfo(0);
+                if (stateInfo.shortNameHash == PickStateHash)
+                {
+                    break;
+                }
+            }
+
+            yield return null;
+        }
+
+        while (Animator != null && targetOre != null && targetOre.IsAlive)
+        {
+            AnimatorStateInfo stateInfo = Animator.GetCurrentAnimatorStateInfo(0);
+            bool isPickState = stateInfo.shortNameHash == PickStateHash;
+
+            if (!isPickState)
+            {
+                yield break;
+            }
+
+            if (!Animator.IsInTransition(0) && stateInfo.normalizedTime >= 1f)
+            {
+                yield break;
+            }
+
+            yield return null;
         }
     }
 
@@ -270,20 +310,31 @@ public class Miner : Character
         }
     }
 
-    private void TryTransferPortableOreToFactory()
+    private IEnumerator TransferPortableOreToFactory()
     {
-        ResolveFactory();
-
-        if (portableOre == null || targetFactory == null)
+        if (portableOre == null)
         {
-            return;
+            yield break;
         }
 
-        targetFactory.TryAddExternalInputResource(
-            portableOre,
-            portableOreTransferDuration,
-            portableOreJumpPower,
-            portableOreJumpCount);
+        WaitForSeconds retryWait = new WaitForSeconds(Mathf.Max(0.01f, portableOreTransferRetryInterval));
+
+        while (isActiveAndEnabled)
+        {
+            ResolveFactory();
+
+            if (targetFactory != null
+                && targetFactory.TryAddExternalInputResource(
+                    portableOre,
+                    portableOreTransferDuration,
+                    portableOreJumpPower,
+                    portableOreJumpCount))
+            {
+                yield break;
+            }
+
+            yield return retryWait;
+        }
     }
 
     private void SetMoveAnimation(bool isMoving)

@@ -47,7 +47,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private float tickMiningHeight = 0.5f;
     [SerializeField]
-    private float tickMiningBack = 0.25f;
+    private float tickMiningBack = 0.5f;
     [SerializeField]
     private Color tickMiningIdleColor = Color.cyan;
     [SerializeField]
@@ -95,16 +95,17 @@ public class PlayerController : MonoBehaviour
     [SerializeField, ReadOnly]
     private int tickMiningOreCount;
 
+    [SerializeField]
+    private AudioClip pickSound, drillSound;
+
     private void Awake()
     {
         player = GetComponentInParent<Player>();
 
-        for (int i = 0; i < oreStack.Count; ++i)
-            oreStack[i].gameObject.SetActive(false);
-        for (int i = 0; i < handcuffsStack.Count; ++i)
-            handcuffsStack[i].gameObject.SetActive(false);
-        for (int i = 0; i < moneyStack.Count; ++i)
-            moneyStack[i].gameObject.SetActive(false);
+        DeactivateStack(oreStack);
+        DeactivateStack(handcuffsStack);
+        DeactivateStack(moneyStack);
+        ClampAllResourceCountsToStackCapacity();
 
         maxIcon.gameObject.SetActive(false);
     }
@@ -115,13 +116,7 @@ public class PlayerController : MonoBehaviour
         FillStackFromHolder(handcuffsHolder, ref handcuffsStack);
         FillStackFromHolder(moneyHodler, ref moneyStack);
 
-        maxOre = oreStack != null ? oreStack.Count : 0;
-        maxHandcuff = handcuffsStack != null ? handcuffsStack.Count : 0;
-        maxMoney = moneyStack != null ? moneyStack.Count : 0;
-
-        oreCount = Mathf.Clamp(oreCount, 0, maxOre);
-        handcuffsCount = Mathf.Clamp(handcuffsCount, 0, maxHandcuff);
-        moneyCount = Mathf.Clamp(moneyCount, 0, maxMoney);
+        ClampAllResourceCountsToStackCapacity();
     }
 
     private void FillStackFromHolder(GameObject holder, ref List<PortableResource> stack)
@@ -157,6 +152,102 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void DeactivateStack(List<PortableResource> stack)
+    {
+        if (stack == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < stack.Count; ++i)
+        {
+            PortableResource portableResource = stack[i];
+            if (portableResource != null)
+            {
+                portableResource.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private List<PortableResource> GetPortableResourceStack(ResourceType type)
+    {
+        switch (type)
+        {
+            case ResourceType.Ore:
+                return oreStack;
+            case ResourceType.Handcuffs:
+                return handcuffsStack;
+            case ResourceType.Money:
+                return moneyStack;
+        }
+
+        return null;
+    }
+
+    private int GetPortableResourceStackCapacity(ResourceType type)
+    {
+        List<PortableResource> stack = GetPortableResourceStack(type);
+        return stack != null ? stack.Count : 0;
+    }
+
+    private PortableResource GetPortableResourceFromStack(ResourceType type, int index)
+    {
+        List<PortableResource> stack = GetPortableResourceStack(type);
+        if (stack == null || index < 0 || index >= stack.Count)
+        {
+            return null;
+        }
+
+        return stack[index];
+    }
+
+    private void SetResourceCount(ResourceType type, int value)
+    {
+        int clampedValue = Mathf.Clamp(value, 0, GetPortableResourceStackCapacity(type));
+
+        switch (type)
+        {
+            case ResourceType.Ore:
+                oreCount = clampedValue;
+                break;
+            case ResourceType.Handcuffs:
+                handcuffsCount = clampedValue;
+                break;
+            case ResourceType.Money:
+                moneyCount = clampedValue;
+                break;
+        }
+    }
+
+    private int ClampResourceCountToStackCapacity(ResourceType type)
+    {
+        switch (type)
+        {
+            case ResourceType.Ore:
+                oreCount = Mathf.Clamp(oreCount, 0, GetPortableResourceStackCapacity(type));
+                return oreCount;
+            case ResourceType.Handcuffs:
+                handcuffsCount = Mathf.Clamp(handcuffsCount, 0, GetPortableResourceStackCapacity(type));
+                return handcuffsCount;
+            case ResourceType.Money:
+                moneyCount = Mathf.Clamp(moneyCount, 0, GetPortableResourceStackCapacity(type));
+                return moneyCount;
+        }
+
+        return 0;
+    }
+
+    private void ClampAllResourceCountsToStackCapacity()
+    {
+        maxOre = oreStack != null ? oreStack.Count : 0;
+        maxHandcuff = handcuffsStack != null ? handcuffsStack.Count : 0;
+        maxMoney = moneyStack != null ? moneyStack.Count : 0;
+
+        oreCount = Mathf.Clamp(oreCount, 0, maxOre);
+        handcuffsCount = Mathf.Clamp(handcuffsCount, 0, maxHandcuff);
+        moneyCount = Mathf.Clamp(moneyCount, 0, maxMoney);
+    }
+
     private void Update()
     {
         if (player == null)
@@ -170,6 +261,8 @@ public class PlayerController : MonoBehaviour
             TickMining();
         else
             player.Animator.SetFloat("fEquip", handcuffsCount > 0 ? 1f : 0f);
+
+        UpdateDrillSound();
     }
 
     public void EnterMine(bool enter)
@@ -179,6 +272,11 @@ public class PlayerController : MonoBehaviour
         player.TakeMiningTool(enterMine);
 
         handcuffsHolder.SetActive(!enterMine);
+
+        if (!enterMine)
+        {
+            StopDrillSound();
+        }
     }
 
     void TickMining()
@@ -438,11 +536,12 @@ public class PlayerController : MonoBehaviour
 
         tickMiningCenter = transform.position + Vector3.up * tickMiningHeight + transform.forward * -tickMiningBack;
         
-        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, player.EquipMiningTool.Status.rnage))
+        if (Physics.Raycast(tickMiningCenter, transform.forward, out hit, player.EquipMiningTool.Status.rnage + tickMiningBack))
         {
             if (hit.collider.CompareTag("Ore"))
             {
                 hit.collider.GetComponent<Resource>().GetResource();
+                player.PlaySound(pickSound);
 
                 if (oreCount >= player.EquipMiningTool.Status.maxOre)
                     TryStartAbleMaxIconCoroutine();
@@ -577,14 +676,6 @@ public class PlayerController : MonoBehaviour
         Gizmos.matrix = previousMatrix;
     }
 
-    void OnTriggerStay(Collider other)
-    {
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-    }
-
     private Vector3 GetMoveDirection(Vector2 input)
     {
         if (Camera.main == null)
@@ -657,113 +748,113 @@ public class PlayerController : MonoBehaviour
 
     public int GetResourceCount(ResourceType type)
     {
-        switch (type)
-        {
-            case ResourceType.Ore:
-                return oreCount;
-            case ResourceType.Handcuffs:
-                return handcuffsCount;
-            case ResourceType.Money:
-                return moneyCount;
-        }
-
-        return 0;
+        return ClampResourceCountToStackCapacity(type);
     }
 
     void UpdateResourceStack(ResourceType type, int stack)
     {
-        switch (type)
+        List<PortableResource> portableResourceStack = GetPortableResourceStack(type);
+        if (portableResourceStack == null)
         {
-            case ResourceType.Ore:
-                for (int i = 0; i < oreStack.Count; ++i)
-                    oreStack[i].gameObject.SetActive(i < stack);
-                break;
-            case ResourceType.Handcuffs:
-                for (int i = 0; i < handcuffsStack.Count; ++i)
-                    handcuffsStack[i].gameObject.SetActive(i < stack);
-                break;
-            case ResourceType.Money:
-                for (int i = 0; i < moneyStack.Count; ++i)
-                    moneyStack[i].gameObject.SetActive(i < stack);
-                break;
+            return;
+        }
+
+        int clampedStack = Mathf.Clamp(stack, 0, portableResourceStack.Count);
+
+        for (int i = 0; i < portableResourceStack.Count; ++i)
+        {
+            PortableResource portableResource = portableResourceStack[i];
+            if (portableResource != null)
+            {
+                portableResource.gameObject.SetActive(i < clampedStack);
+            }
         }
     }
 
     public void AddResource(ResourceType type)
     {
-        switch (type)
-        {
-            case ResourceType.Ore:
-                UpdateResourceStack(type, ++oreCount);
-                break;
-            case ResourceType.Handcuffs:
-                UpdateResourceStack(type, ++handcuffsCount);
-                break;
-            case ResourceType.Money:
-                UpdateResourceStack(type, ++moneyCount);
-                break;
-        }
+        int nextCount = ClampResourceCountToStackCapacity(type) + 1;
+        SetResourceCount(type, nextCount);
+        UpdateResourceStack(type, GetResourceCount(type));
     }
 
     public void SubResrouce(ResourceType type)
     {
-        switch (type)
-        {
-            case ResourceType.Ore:
-                --oreCount;
-                break;
-            case ResourceType.Handcuffs:
-                --handcuffsCount;
-                break;
-            case ResourceType.Money:
-                --moneyCount;
-                break;
-        }
+        int nextCount = Mathf.Max(0, ClampResourceCountToStackCapacity(type) - 1);
+        SetResourceCount(type, nextCount);
     }
 
     public PortableResource GetPoppedResource(ResourceType type)
     {
-        switch (type)
-        {
-            case ResourceType.Ore:
-                return oreStack[oreCount];
-            case ResourceType.Handcuffs:
-                return handcuffsStack[handcuffsCount];
-            case ResourceType.Money:
-                return moneyStack[moneyCount];
-        }
-
-        return null;
+        int resourceCount = ClampResourceCountToStackCapacity(type);
+        return GetPortableResourceFromStack(type, resourceCount);
     }
 
     public PortableResource GetCurrentTopResource(ResourceType type)
     {
-        switch (type)
-        {
-            case ResourceType.Ore:
-                return oreCount > 0 ? oreStack[oreCount - 1] : null;
-            case ResourceType.Handcuffs:
-                return handcuffsCount > 0 ? handcuffsStack[handcuffsCount - 1] : null;
-            case ResourceType.Money:
-                return moneyCount > 0 ? moneyStack[moneyCount - 1] : null;
-        }
-
-        return null;
+        int resourceCount = ClampResourceCountToStackCapacity(type);
+        return GetPortableResourceFromStack(type, resourceCount - 1);
     }
 
     public bool CanAddResource(ResourceType type)
     {
-        switch (type)
+        return GetResourceCount(type) < GetPortableResourceStackCapacity(type);
+    }
+
+    private void UpdateDrillSound()
+    {
+        if (player == null)
         {
-            case ResourceType.Ore:
-                return oreStack != null && oreCount < oreStack.Count;
-            case ResourceType.Handcuffs:
-                return handcuffsStack != null && handcuffsCount < handcuffsStack.Count;
-            case ResourceType.Money:
-                return moneyStack != null && moneyCount < moneyStack.Count;
+            return;
         }
 
-        return false;
+        bool shouldPlayDrillSound = false;
+
+        switch (player.GetToolType())
+        {
+            case MiningToolType.Screw:
+                Screw screw = player.EquipMiningTool as Screw;
+                shouldPlayDrillSound = screw != null && screw.IsRotating;
+                break;
+            case MiningToolType.Vehicle:
+                Vehicle vehicle = player.EquipMiningTool as Vehicle;
+                shouldPlayDrillSound = vehicle != null && vehicle.IsRotating;
+                break;
+        }
+
+        if (shouldPlayDrillSound)
+        {
+            PlayDrillSound();
+        }
+        else
+        {
+            StopDrillSound();
+        }
+    }
+
+    private void PlayDrillSound()
+    {
+        if (player == null || drillSound == null)
+        {
+            return;
+        }
+
+        if (player.IsPlayingSound(drillSound, true))
+        {
+            return;
+        }
+
+        player.PlaySound(drillSound, true);
+    }
+
+    private void StopDrillSound()
+    {
+        if (player == null || drillSound == null)
+        {
+            return;
+        }
+
+        player.StopSound(drillSound);
     }
 
     public int HandcuffsCount => handcuffsCount;

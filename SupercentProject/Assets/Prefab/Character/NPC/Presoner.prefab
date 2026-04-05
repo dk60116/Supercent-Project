@@ -49,6 +49,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   objectName: Presoner
+  audioSource: {fileID: 0}
   status:
     moveSpeed: 2
     rotationSpeed: 360
@@ -135,7 +136,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: b2f98b7ee430671459fd4ad22ae41e16,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b2f98b7ee430671459fd4ad22ae41e16,
         type: 3}
@@ -686,7 +687,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: feaa22fde3d4ed946917363348c35942,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: feaa22fde3d4ed946917363348c35942,
         type: 3}

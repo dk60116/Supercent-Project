@@ -16,12 +16,14 @@ public class WaitingLine : MonoBehaviour
     [SerializeField]
     private List<Transform> waitPoints;
     [SerializeField]
-    private Transform endPoint, endPoint2;
+    private Transform endPoint, endPoint2, endPoint3;
     [SerializeField, ReadOnly]
     private List<bool> hasPersonList;
 
     [SerializeField]
     private List<Presoner> presoners;
+    [SerializeField, ReadOnly]
+    private List<Presoner> pendingReleasePresoners;
 
     void Start()
     {
@@ -30,6 +32,9 @@ public class WaitingLine : MonoBehaviour
 
     void Update()
     {
+        EnsurePendingReleaseList();
+        RemoveInvalidPendingReleasePresoners();
+
         for (int i = 0; i < presoners.Count; ++i)
         {
             Presoner presoner = presoners[i];
@@ -40,6 +45,8 @@ public class WaitingLine : MonoBehaviour
 
             presoner.StartWaiting();
         }
+
+        TryProcessPendingRelease();
     }
 
     public FindWaitTargetInfo FindEmptyPoint()
@@ -88,6 +95,7 @@ public class WaitingLine : MonoBehaviour
         }
 
         presoners.Remove(presoner);
+        pendingReleasePresoners?.Remove(presoner);
     }
 
     public bool TryAssignWaitPoint(Presoner presoner)
@@ -120,12 +128,88 @@ public class WaitingLine : MonoBehaviour
             return;
         }
 
+        EnsurePendingReleaseList();
+
+        if (!pendingReleasePresoners.Contains(targetPresoner))
+        {
+            pendingReleasePresoners.Add(targetPresoner);
+        }
+
+        TryProcessPendingRelease();
+    }
+
+    public Presoner GetCounterPresoner()
+    {
+        for (int i = 0; i < presoners.Count; ++i)
+        {
+            if (presoners[i] != null && presoners[i].IsArrivalCounter)
+            {
+                return presoners[i];
+            }
+        }
+
+        return null;
+    }
+
+    public bool HasPresonerMovingToJail()
+    {
+        for (int i = 0; i < presoners.Count; ++i)
+        {
+            Presoner presoner = presoners[i];
+            if (presoner != null && presoner.IsMovingToJail)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public Transform StartPoint => startPoint;
+    public int WaitingPointCount => waitPoints.Count;
+
+    private void TryProcessPendingRelease()
+    {
+        EnsurePendingReleaseList();
+        RemoveInvalidPendingReleasePresoners();
+
+        if (pendingReleasePresoners.Count <= 0)
+        {
+            return;
+        }
+
+        int maxReleaseCount = pendingReleasePresoners.Count;
+        for (int i = 0; i < maxReleaseCount; ++i)
+        {
+            Presoner targetPresoner = FindNextCounterReleasePresoner();
+            if (targetPresoner == null)
+            {
+                return;
+            }
+
+            if (ShouldHoldReleaseAtCounter())
+            {
+                return;
+            }
+
+            BeginReleasePresoner(targetPresoner);
+            pendingReleasePresoners.Remove(targetPresoner);
+        }
+    }
+
+    private void BeginReleasePresoner(Presoner targetPresoner)
+    {
+        if (targetPresoner == null)
+        {
+            return;
+        }
+
         targetPresoner.ChangeMode(true);
 
         int releasedIndex = targetPresoner.WaitIndex;
         if (releasedIndex < 0 || releasedIndex >= hasPersonList.Count)
         {
-            targetPresoner.MoveToEndPoint(endPoint, endPoint2);
+            targetPresoner.MoveToEndPoint(endPoint, endPoint2, endPoint3);
             return;
         }
 
@@ -144,24 +228,43 @@ public class WaitingLine : MonoBehaviour
             hasPersonList[index] = false;
         }
 
-        targetPresoner.MoveToEndPoint(endPoint, endPoint2);
+        targetPresoner.MoveToEndPoint(endPoint, endPoint2, endPoint3);
     }
 
-    public Presoner GetCounterPresoner()
+    private void EnsurePendingReleaseList()
     {
-        for (int i = 0; i < presoners.Count; ++i)
+        if (pendingReleasePresoners == null)
         {
-            if (presoners[i] != null && presoners[i].IsArrivalCounter)
+            pendingReleasePresoners = new List<Presoner>();
+        }
+    }
+
+    private void RemoveInvalidPendingReleasePresoners()
+    {
+        if (pendingReleasePresoners == null)
+        {
+            return;
+        }
+
+        pendingReleasePresoners.RemoveAll(presoner =>
+            presoner == null
+            || !presoners.Contains(presoner)
+            || presoner.IsLeaving);
+    }
+
+    private Presoner FindNextCounterReleasePresoner()
+    {
+        for (int i = 0; i < pendingReleasePresoners.Count; ++i)
+        {
+            Presoner presoner = pendingReleasePresoners[i];
+            if (presoner != null && presoner.WaitIndex == 0)
             {
-                return presoners[i];
+                return presoner;
             }
         }
 
         return null;
     }
-
-    public Transform StartPoint => startPoint;
-    public int WaitingPointCount => waitPoints.Count;
 
     private Presoner GetPresonerByWaitIndex(int waitIndex)
     {
@@ -175,5 +278,25 @@ public class WaitingLine : MonoBehaviour
         }
 
         return null;
+    }
+
+    private bool ShouldHoldReleaseAtCounter()
+    {
+        Jail jail = FindObjectOfType<Jail>();
+        if (jail == null || !jail.IsAtCapacity())
+        {
+            return false;
+        }
+
+        for (int i = 0; i < presoners.Count; ++i)
+        {
+            Presoner presoner = presoners[i];
+            if (presoner != null && presoner.IsWaitingForJailEntry)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -46,10 +46,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   objectName: Pickaxe
+  audioSource: {fileID: 0}
   status:
     maxOre: 10
-    pickingDelay: 0.3
+    pickingDelay: 0.5
     rnage: 1
+    width: 0
   type: 0
 --- !u!1001 &7470605354871578734
 PrefabInstance:
