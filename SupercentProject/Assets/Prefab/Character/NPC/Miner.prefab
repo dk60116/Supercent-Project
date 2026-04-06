@@ -113,6 +113,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: Portable_Ore
       objectReference: {fileID: 0}
+    - target: {fileID: 1912266584879250975, guid: 08235c1ba345d6f4fa0fd1e5a1648040,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 9203053869867471753, guid: 08235c1ba345d6f4fa0fd1e5a1648040,
         type: 3}
       propertyPath: m_LocalPosition.x

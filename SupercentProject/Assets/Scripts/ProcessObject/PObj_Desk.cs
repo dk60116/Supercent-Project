@@ -49,9 +49,9 @@ public class PObj_Desk : ProcessObject
         EnsureDeskInputSlotStateCache();
 
         PlayerController playerController = GameManager.Instance != null && GameManager.Instance.Player != null
-            ? GameManager.Instance.Player.Controller
-            : null;
+            ? GameManager.Instance.Player.Controller : null;
         Presoner targetPresoner = GetCounterPresoner();
+
         bool canOutputToPlayer = enterOutput
             && outputCount > 0
             && playerController != null
@@ -73,7 +73,7 @@ public class PObj_Desk : ProcessObject
         {
             if (prisonerOutputTickTime == 0f || prisonerOutputTickTime >= prisonerOutputInterval)
             {
-                PlaySound(popSound);
+                GameManager.Instance.Player.PlaySound(popSound);
                 RequestSubOutputResource(targetPresoner);
                 prisonerOutputTickTime = 0f;
             }

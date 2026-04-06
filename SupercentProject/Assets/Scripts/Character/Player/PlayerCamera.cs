@@ -42,7 +42,6 @@ public class PlayerCamera : MonoBehaviour
             }
 
             UpdateFollowDistance();
-            Debug.Log("FFF");
         }
 
         transform.rotation = Quaternion.Euler(targetRotation);
